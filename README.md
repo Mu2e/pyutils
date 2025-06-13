@@ -47,9 +47,9 @@ pylogger    # Helper module for managing printouts
 
 To learn by example, follow the `pyutils` tutorial series.
 
-1. [pyutils_basics.ipynb](../../example-analysis-scripts/pyutils-examples/pyutils_basics.ipynb) - Introduction to core functionality
-1. [pyutils_on_EAF.ipynb](../../example-analysis-scripts/pyutils-examples/pyutils_on_EAF.ipynb) - Reading data with `pyutils` from the Elastic Analysis Facility (EAF) 
-1. [pyutils_multifile.ipynb](../../example-analysis-scripts/pyutils-examples/pyutils_multifile.ipynb) - Basic parallelisation with file lists and SAM definitions, as well as complex parallelised analysis tasks using the `pyprocess` `Skeleton` template class.
+1. [pyutils_basics.ipynb](examples/pyutils_basics.ipynb) - Introduction to core functionality
+1. [pyutils_on_EAF.ipynb](examples/pyutils_on_EAF.ipynb) - Reading data with `pyutils` from the Elastic Analysis Facility (EAF) 
+1. [pyutils_multifile.ipynb](examples/pyutils_multifile.ipynb) - Basic parallelisation with file lists and SAM definitions, as well as complex parallelised analysis tasks using the `pyprocess` `Skeleton` template class.
 
 
 ### 2.2 Module documentation 
