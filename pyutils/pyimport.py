@@ -1,7 +1,7 @@
 import uproot
 import awkward as ak
-from .pyread import Reader
-from .pylogger import Logger
+from pyread import Reader
+from pylogger import Logger
 
 class Importer:
     """Utility class for importing branches from ROOT TTree files

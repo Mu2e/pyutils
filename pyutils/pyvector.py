@@ -4,7 +4,7 @@ import awkward as ak
 import math
 import numpy as np
 import vector
-from .pylogger import Logger
+from pylogger import Logger
 
 class Vector:
 

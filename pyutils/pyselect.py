@@ -2,7 +2,7 @@
 import uproot
 import awkward as ak
 import numpy as np
-from .pylogger import Logger
+from pylogger import Logger
     
 class Select:
     """

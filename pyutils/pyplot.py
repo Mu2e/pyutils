@@ -8,7 +8,7 @@ from scipy import stats
 from matplotlib.ticker import ScalarFormatter
 import matplotlib.colors as colors
 
-from .pylogger import Logger
+from pylogger import Logger
 
 class Plot:
     """ 

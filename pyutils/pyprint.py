@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import awkward as ak
-from .pylogger import Logger
+from pylogger import Logger
 
 class Print:
     """

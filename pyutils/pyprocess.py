@@ -6,9 +6,9 @@ import awkward as ak
 import inspect
 import tqdm
 import gc
-from . import _env_manager # Environment manager
-from .pyimport import Importer # For importing branches
-from .pylogger import Logger # Messaging/logging
+from _env_manager import * # Environment manager
+from pyimport import Importer # For importing branches
+from pylogger import Logger # Messaging/logging
 
 # TODO: implement failed file handling, accumalation across threads and dask.awkward
 

@@ -3,7 +3,7 @@
 
 import os
 import subprocess
-from .pylogger import Logger
+from pylogger import Logger
 
 ENV_IS_SETUP = False
 
