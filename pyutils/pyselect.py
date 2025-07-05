@@ -216,55 +216,30 @@ class Select:
         except Exception as e:
             self.logger.log(f"Exception in has_n_hits(): {e}", "error")
             return None
-
-    # Below code may need a review? 
     
-    def hasTrkCrvCoincs(self, trks, ntuple, tmax):
-        """ simple function to remove anything close to a crv coinc """
+    def hasTrkCrvCoincs(self, data, dt_threshold=150):
+        """ simple version of the crv coincidence checker """
 
-        # Looping through events like this is pretty inefficient 
-        # Can we do it with array operations? 
-        # Can we explain a bit more about what this does?
+        at_trk_front = self.select_surface(data['trkfit'], sid=0)
         
-        crvst = ntuple["crvcoincs"]
-        crvs = crvst.arrays(library='ak')
-        has_coin = np.ones(ak.num(trks, axis=0), dtype=bool)
-        for i_evt, evt in enumerate(trks['trksegs']['time']):
-            for i_trk, trk in enumerate(evt):
-                if ak.num(ak.drop_none(trk), axis = 0) > 0:
-                    for i_crv, crv in enumerate(crvs['crvcoincs.time'][ i_evt]):
-                        if np.abs(trk[0] - crv) < tmax:
-                            has_coin[i_evt] = False
-        return has_coin
-
-
-    def MakeMask(self, branch, treename, leaf, eql, v1, v2=None):
-        """ makes a mask for the chosen branch/leaf v1 = min, v2 = max, use eql if you want it == v1"""
-
-        # Can we explain a bit more about what this does?
+        # Get track and coincidence times
+        trk_times = data["trksegs"]["time"][at_trk_front]  # events × tracks × segments
+        coinc_times = data["crvcoincs.time"]                  # events × coincidences
         
-        mask=""
-        if eql == True:
-            mask = (branch[str(treename)][str(leaf)]==v1)
-        else:
-            mask = (branch[str(treename)][str(leaf)] >  v1) & (branch[str(treename)][str(leaf)] < v2)
-        return mask
+        # Broadcast CRV times to match track structure, so that we can compare element-wise
+        coinc_broadcast = coinc_times[:, None, None, :]  # Add dimensions for tracks and segments
+        trk_broadcast = trk_times[:, :, :, None]         # Add dimension for coincidences
 
-    def MakeMaskList(self, branch, treenames, leaves, eqs, v1s, v2s):
-        """ makes a mask for the chosen branch/leaf v1 = min, v2 = max, use eql if you want it == v1"""
-
-        # Can we explain a bit more about what this does?
+        # Calculate time differences
+        dt = abs(trk_broadcast - coinc_broadcast)
         
-        mask_list=[]
-        print(treenames,leaves,eqs,v1s,v2s)
-        for i, tree in enumerate(treenames):
-            print(treenames[i],leaves[i],eqs[i],v1s[i],v2s[i])
-            mask = ""
-            if eqs[i] == True:
-                mask = (branch[str(treenames[i])][str(leaves[i])] == v1s[i])
-                print(i, mask)
-            else:
-                mask = (branch[str(treenames[i])][str(leaves[i])] >  v1s[i]) & (branch[str(treenames[i])][str(leaves[i])] < v2s[i])
-                print(i, mask)
-            mask_list.append(mask)
-        return mask_list
+        # Check if within threshold
+        within_threshold = dt < dt_threshold
+
+        # Check if any coincidence
+        any_coinc = ak.any(within_threshold, axis=3)
+        
+        # Then reduce over trks (axis=2) 
+        veto = ak.any(any_coinc, axis=2)
+
+        return veto
