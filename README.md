@@ -4,7 +4,9 @@
 
 >**Note**: This is a standlone version of `pyutils` which is installed in the Mu2e Python environment v2.0.0. 
 
-## 1. Setting up 
+## 1. Setting up
+
+### on Mu2e machines using Mu2e supported environment
 
 `pyutils` is designed to work with packages installed in the Mu2e Python environment, which is currently maintained by the L4 for Analysis Interfaces, Sam Grant.
 
@@ -21,6 +23,17 @@ pyenv -h # Get help (--help and pyenv with no flag will also return help)
 >**Note**: `mu2einit` should be aliased to `source /cvmfs/mu2e.opensciencegrid.org/setupmu2e-art.sh` in your `~/.my_bashrc`.
 
 See the [tutorial](https://github.com/Mu2e/Tutorial/blob/main/EAF/Docs/06-TheMu2eEnvironment.md) on GitHub and the [wiki](https://mu2ewiki.fnal.gov/wiki/Elastic_Analysis_Facility_(EAF)#The_Mu2e_environment) page for more information.
+
+
+### on your own computer/own environment
+
+To install pyutils in your custom environment you can do so using pip
+
+```
+pip install git+https://github.com/Mu2e/pyutils.git
+```
+
+pyutils should then operate in the same as it does within the Mu2e environment.
 
 ## 2. Using `pyutils` 
 
