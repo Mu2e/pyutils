@@ -1,6 +1,5 @@
 import uproot
 import awkward as ak
-from .pyread import Reader
 from .pylogger import Logger
 
 class Importer:
@@ -9,40 +8,36 @@ class Importer:
     Intended to used via by the pyprocess Processor class
     """
     
-    def __init__(self, file_name, branches, tree_path="EventNtuple/ntuple", use_remote=False, location="disk", schema="root", verbosity=1):
+    def __init__(self, file_name, branches, tree_path="EventNtuple/ntuple", verbosity=1):
         """Initialise the importer
         
         Args:
             file_name: Name of the file
             branches: Flat list or grouped dict of branches to import
             tree_path (str, opt): Path to the Ntuple in file directory. Default is "EventNtuple/ntuple".
-            use_remote: Flag for reading remote files 
-            location: Remote files only. File location: tape (default), disk, scratch, nersc 
-            schema: Remote files only. Schema used when writing the URL: root (default), http, path, dcap, samFile
             verbosity: Print detail level (0: minimal, 1: medium, 2: maximum) 
             
         """
         self.file_name = file_name
         self.branches = branches
         self.tree_path = tree_path 
-        self.use_remote = use_remote
-        self.location = location
-        self.schema = schema
         self.verbosity = verbosity
 
         self.logger = Logger( # Start logger
             print_prefix = "[pyimport]", 
             verbosity = verbosity
         )
-    
-        # Create reader 
-        self.reader = Reader(
-            use_remote=self.use_remote,
-            location=self.location,
-            schema=self.schema,
-            verbosity=self.verbosity
-        )
-        
+
+    def _read_file(self, file_path):
+        """Open file with uproot"""
+        try: 
+            file = uproot.open(file_path)
+            self.logger.log(f"Opened {file_path}", "success")
+            return file
+        except Exception as e:
+            self.logger.log(f"Exception while opening {file_path}: {e}", "warning")
+            raise # propagate exception up
+            
     def import_branches(self):
         """Internal function to open ROOT file and import specified branches
             
@@ -51,7 +46,7 @@ class Importer:
         """
         try:
             # Open file 
-            file = self.reader.read_file(self.file_name) 
+            file = self._read_file(self.file_name) 
             # Access the tree
             components = self.tree_path.split('/')
             current = file
