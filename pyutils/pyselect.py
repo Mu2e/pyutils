@@ -240,6 +240,7 @@ class Select:
             quality (float): The numerical output of the MVA
 
         """
+        #FIXME - need to ensure this is using the latest
         try:
             # Construct & return mask
             mask = (data["trkqual.result"] > quality)
@@ -248,7 +249,11 @@ class Select:
         except Exception as e:
             self.logger.log(f"Exception in select_trkqual(): {e}", "error")
             return None
-            
+     
+    def select_trkpid(self, data, value):
+      """ TODO: placeholder """
+      return None
+             
     def has_n_hits(self, data, n_hits):
         """ Return boolean array for tracks with hits above a specified value 
 

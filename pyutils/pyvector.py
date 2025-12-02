@@ -68,7 +68,7 @@ class Vector:
         """ Return an array of vector magnitudes for specified branch
 
         Args:
-            branch (awkward.Array): The branch, such as trgsegs or crvcoincs
+            branch (awkward.Array): The branch, such as trksegs or crvcoincs
             vector_name: The parameter associated with the vector, such as 'mom' or 'pos'
         """
         vector = self.get_vector(
@@ -86,3 +86,26 @@ class Vector:
             mag.type.show()
         
         return mag
+        
+    def get_rho(self, branch, vector_name):
+        """ Return an array of vector rho (transverse magnitude) for specified branch
+
+        Args:
+            branch (awkward.Array): The branch, such as trksegs or crvcoincs
+            vector_name: The parameter associated with the vector, such as 'mom' or 'pos'
+        """
+        vector = self.get_vector(
+        branch=branch,
+            vector_name=vector_name
+        )
+        try: 
+            r = vector.rho
+        except Exception as e:
+            self.logger.log(f"Failed to get vector rho: {e}", "error")
+            return None
+        
+        self.logger.log(f"Got '{vector_name}' rho", "success")
+        if self.verbosity > 1:
+            r.type.show()
+        
+        return r
