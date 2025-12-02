@@ -243,7 +243,6 @@ class Select:
             quality (float): The numerical output of the MVA
 
         """
-        #FIXME - need to ensure this is using the latest
         try:
             # Construct & return mask
             mask = (data["trkqual.result"] > quality)
@@ -254,9 +253,71 @@ class Select:
             return None
      
     def select_trkpid(self, data, value):
-      """ TODO: placeholder """
-      return None
-             
+        """ Return boolean array for tracks above a specified PID score (range 0 - 1, -1=No score)   
+
+        Args: 
+            data (awkward.Array): Input array containing the trkqual.result branch
+            value (float): The numerical output of the MVA
+
+        """
+        try:
+            # Construct & return mask
+            mask = (data["trkpid.result"] > value)
+            self.logger.log(f"Returning mask for trkqual > {value}", "success")
+            return mask
+        except Exception as e:
+            self.logger.log(f"Exception in select_trkpid(): {e}", "error")
+            return None
+     
+    def get_trigger(self, data, name):
+        """ Return boolean array for the chosen trigger name 
+        Args: 
+            data (awkward.Array): Input array containing the data and including the trigger branches which you want to select
+            name : name of the trigger
+            usage: get_trigger(data, "trig_tprHelixDe_ipa")
+        """
+        try:
+            # Construct & return mask
+            mask = (data[str(name)] == 1)
+            self.logger.log(f"Returning mask for trigger == {name}", "success")
+            return mask
+        except Exception as e:
+            self.logger.log(f"Exception in select_trigger(): {e}", "error")
+            return None
+            
+    def get_triggers(self, data, names):
+        """ 
+        Return a single boolean array (mask) for events where ALL specified triggers are true (== 1).
+
+        Assumes all 'names' exist as branches in 'data' and contain only 0s or 1s.
+
+        Args: 
+            data (awkward.Array): Input array containing the data and the trigger branches.
+            names (list[str]): A list of trigger names.
+            
+        Usage: 
+            combined_mask = get_triggers(data, ["trig_tprHelixDe_ipa", "another_trigger_name"])
+        """
+        if not isinstance(names, list) or not names:
+          self.logger.log("Trigger name list is empty or invalid.", "error")
+          return None
+            
+        num_events = len(data)
+        try:
+            initial_mask_np = np.ones(num_events, dtype=bool)
+            combined_mask = ak.Array(initial_mask_np)
+        except Exception as e:
+            self.logger.log(f"Could not create initial mask: {e}", "error")
+            return None
+
+        for name in names:
+            current_trigger_mask = (data[str(name)] == 1)
+            combined_mask = combined_mask & current_trigger_mask
+            self.logger.log(f"Applied mask for trigger: {name}", "success")
+
+        self.logger.log(f"Returning final combined mask for all {len(names)} triggers.", "success")
+        return combined_mask
+    
     def has_n_hits(self, data, n_hits):
         """ Return boolean array for tracks with hits above a specified value 
 

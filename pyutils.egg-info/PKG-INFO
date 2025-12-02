@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: pyutils
-Version: 1.2.0
-Summary: Python tools for Mu2e collaborators
-Home-page: https://github.com/Mu2e/pyutils
-Author: Sophie Middleton, Samuel Grant, Andrew Edmonds, Leo Borrel
-License-File: LICENSE
