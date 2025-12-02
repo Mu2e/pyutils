@@ -33,6 +33,8 @@ class Select:
             "TT_Front" :0,
             "TT_Mid" : 1,
             "TT_Back" : 2,
+            "TT_Inner" : 3,
+            "TT_Outer" : 4,
             "DS_Inner" : 82,
             "DS_Outer" : 83,
             "ST_Front": 100,
@@ -51,7 +53,7 @@ class Select:
 
     def get_surface_name(self, sid):
         """Convert an integer surface ID (sid) to a meaningful name.
-        """
+        """       
         return self.surface_id_map.get(sid)
         
     def is_electron(self, data):
@@ -175,6 +177,7 @@ class Select:
         """
         # convert the string to the int underneath
         sid = self.get_surface_name(surface_name)
+        
         try:
             # Construct & return mask
             mask = (data[branch_name]['sid']==sid)# & (data[branch_name]['sindex']==sindex)
@@ -240,6 +243,7 @@ class Select:
             quality (float): The numerical output of the MVA
 
         """
+        #FIXME - need to ensure this is using the latest
         try:
             # Construct & return mask
             mask = (data["trkqual.result"] > quality)
@@ -248,7 +252,11 @@ class Select:
         except Exception as e:
             self.logger.log(f"Exception in select_trkqual(): {e}", "error")
             return None
-            
+     
+    def select_trkpid(self, data, value):
+      """ TODO: placeholder """
+      return None
+             
     def has_n_hits(self, data, n_hits):
         """ Return boolean array for tracks with hits above a specified value 
 
