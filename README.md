@@ -903,6 +903,12 @@ CLASSES
      |          branch (awkward.Array): The branch, such as trgsegs or crvcoincs
      |          vector_name: The parameter associated with the vector, such as 'mom' or 'pos'
      |
+     |   get_rho(self, branch, vector_name):
+     |       Return an array of vector rho (transverse magnitude) for specified branch
+     |
+     |    Args:
+     |        branch (awkward.Array): The branch, such as trksegs or crvcoincs
+     |        vector_name: The parameter associated with the vector, such as 'mom' or 'pos'
      |  ----------------------------------------------------------------------
 ```
 
