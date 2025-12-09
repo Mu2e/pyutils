@@ -8,7 +8,7 @@
 
 ### on Mu2e machines using Mu2e supported environment
 
-`pyutils` is designed to work with packages installed in the Mu2e Python environment, which is currently maintained by the L4 for Analysis Interfaces, Sam Grant.
+`pyutils` is designed to work with packages installed in the Mu2e Python environment, which is currently maintained by the Analysis Tools Group Leaders Andy Edmonds and Sophie Middleton along with L4 for Analysis Interfaces, Sam Grant.
 
 To activate the environment, first run `mu2einit` and then **one** `pyenv` command, like
 
