@@ -552,7 +552,6 @@ CLASSES
 
 Tools for creating and managing selection cut masks. 
 
->**Note**: `MakeMask` and `MakeMaskList` may need revisiting; CutManager class for complex analyses coming soon. 
 
 <details>
 <summary>Click for details</summary>
@@ -571,12 +570,6 @@ CLASSES
      |  Class for standard selection cuts with EventNtuple data in Awkward format
      |
      |  Methods defined here:
-     |
-     |  MakeMask(self, branch, treename, leaf, eql, v1, v2=None)
-     |      makes a mask for the chosen branch/leaf v1 = min, v2 = max, use eql if you want it == v1
-     |
-     |  MakeMaskList(self, branch, treenames, leaves, eqs, v1s, v2s)
-     |      makes a mask for the chosen branch/leaf v1 = min, v2 = max, use eql if you want it == v1
      |
      |  __init__(self, verbosity=1)
      |      Initialise the selector
