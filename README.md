@@ -61,6 +61,23 @@ To learn by example, follow the `pyutils` tutorial series.
 1. [pyutils_multifile.ipynb](examples/notebooks/pyutils_multifile.ipynb) - Basic parallelisation with file lists and SAM definitions, as well as complex parallelised analysis tasks using the `pyprocess` `Skeleton` template class.
 1. [pyplot_demo.ipynb](examples/notebooks/pyplot_demo.ipynb) - A comprehensive demonstration of the `pyplot.Plot` class.
 1. [pycut_demo.ipynb](examples/notebooks/pycut_demo.ipynb) - A comprehensive demonstration of the `pycut.CutManager` class.
+1. [pyutils_mctruth.ipynb](examples/notebooks/pyutils_mctruth.ipynb) - Examples of how to use the mc truth interface for simulation based studies.
+
+To open a jupyter notebook on the mu2e machines:
+
+```
+jupyter-lab --no-browser #--port 1234 
+```
+
+replacing `1234` with a chosen port number. The default is  `8888`. On your local machine create a ssh tunnel:
+
+```
+ssh -KXY -L 08888:localhost:08888 <user>@mu2egpvm0<machine>.fnal.gov
+```
+
+replacing the port (8888) with your chosen number and the user with your username and mu2e machine ID with that on which you launched jupyter-lab.
+
+To connect to the notebook copy the URL with the unique token printed in the terminal of the mu2e machine into your local browser.
 
 ### 2.2 Module documentation 
 
