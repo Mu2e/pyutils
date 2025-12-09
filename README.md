@@ -877,6 +877,166 @@ CLASSES
 </details>
 
 ---
+#### `pycut`
+
+A comprehensive framework for managing analysis cuts.
+
+<details>
+<summary>Click for details</summary>
+
+## Features 
+
+### Cut definition and management
+- **`add_cut(name, description, mask, active=True, group=None)`** - Define analysis cuts with boolean masks
+- **`toggle_cut(cut_dict)`** - Enable/disable individual cuts using dictionary mapping
+- **`toggle_group(group_dict)`** - Enable/disable entire groups of cuts 
+
+### Cut flow generation
+- **`create_cut_flow(data)`** - Generate detailed cut flow showing progressive event retention
+- **`format_cut_flow(cut_flow)`** - Format cut flow as `pandas` DataFrame
+- **`combine_cut_flows(cut_flow_list)`** - Combine multiple cut flows (useful for multiprocessing)
+
+### Selection application
+- **`combine_cuts(cut_names=None, active_only=True)`** - Generate combined boolean mask from selected cuts
+- **`get_active_cuts()`** - Retrieve currently active cuts for inspection
+
+### State management
+- **`save_state(state_name)`** - Save current cut configuration for later restoration
+- **`restore_state(state_name)`** - Restore previously saved cut configuration
+- **`restore_original_state()`** - Reset all cuts to their initial active states
+- **`list_saved_states()`** - Display all available saved configurations
+
+### Organisation and inspection
+- **`get_groups()`** - Retrieve cuts organised by group membership
+- **`list_groups()`** - Display summary of all groups and their cut contents
+
+## Typical workflow
+
+1. Define cuts using `add_cut()` with appropriate groups
+2. Generate baseline cut flow with `create_cut_flow()`
+3. Save nominal configuration with `save_state()`
+4. Create alternative configurations using `toggle_cut()` or `toggle_group()`
+5. Compare efficiencies between configurations
+6. Apply selected cuts using `combine_cuts()` for analysis
+7. Restore configurations as needed with `restore_state()`
+
+The module integrates well with the broader pyutils ecosystem, working with data processed by `pyprocess` and selections created by `pyselect`.
+
+```
+Help on module pyutils.pycut in pyutils:
+
+NAME
+    pyutils.pycut
+
+CLASSES
+    builtins.object
+        CutManager
+
+    class CutManager(builtins.object)
+     |  CutManager(verbosity=1)
+     |
+     |  Class to manage analysis cuts
+     |
+     |  Methods defined here:
+     |
+     |  __init__(self, verbosity=1)
+     |      Initialise
+     |
+     |      Args:
+     |          verbosity (int, optional): Printout level (0: minimal, 1: normal, 2: detailed)
+     |
+     |  add_cut(self, name, description, mask, active=True, group=None)
+     |      Add a cut to the collection.
+     |
+     |      Args:
+     |          name (str): Name of the cut
+     |          description (str): Description of what the cut does
+     |          mask (awkward.Array): Boolean mask array for the cut
+     |          active (bool, optional): Whether the cut is active by default
+     |          group (str, optional): Group name for organizing cuts
+     |
+     |  combine_cut_flows(self, cut_flow_list, format_as_df=True)
+     |      Combine a list of cut flows after multiprocessing
+     |
+     |      Args:
+     |          cut_flows: List of cut statistics lists from different files
+     |          format_as_df (bool, optional): Format output as a pd.DataFrame. Defaults to True.
+     |
+     |      Returns:
+     |          list: Combined cut statistics
+     |
+     |  combine_cuts(self, cut_names=None, active_only=True)
+     |      Return a Boolean combined mask from specified cuts. Applies an AND operation across all cuts.
+     |      Args:
+     |
+     |      cut_names (list, optional): List of cut names to include (if None, use all cuts)
+     |      active_only (bool, optional): Whether to only include active cuts
+     |
+     |  create_cut_flow(self, data)
+     |      Utility to calculate cut flow from array and cuts object
+     |
+     |      Args:
+     |          data (awkward.Array): Input data
+     |
+     |  format_cut_flow(self, cut_flow, include_group=True)
+     |      Format cut flow as a DataFrame with more readable column names
+     |
+     |      Args:
+     |          cut_flow (dict): The cut flow to format
+     |          include_group (bool, optional): Whether to include group column
+     |      Returns:
+     |          df_cut_flow (pd.DataFrame)
+     |
+     |  get_active_cuts(self)
+     |      Utility to get all active cutss
+     |
+     |  get_groups(self)
+     |      Get all unique group names and their cuts
+     |
+     |      Returns:
+     |          dict: Dictionary mapping group names to lists of cut names
+     |
+     |  list_groups(self)
+     |      Print all groups and their cuts
+     |
+     |  list_saved_states(self)
+     |      List all saved states
+     |
+     |  restore_original_state(self)
+     |      Restore all cuts to their original active states (as defined when added)
+     |
+     |  restore_state(self, state_name='default')
+     |      Restore previously saved cut states
+     |
+     |      Args:
+     |          state_name (str): Name of the saved state to restore
+     |
+     |  save_state(self, state_name='default')
+     |      Save current active states of all cuts
+     |
+     |      Args:
+     |          state_name (str): Name for this saved state
+     |
+     |  toggle_cut(self, cut_dict)
+     |      Utility to set cut(s) as inactive or active based on input dictionary
+     |
+     |      Args:
+     |          cut_dict (dict): Dictionary mapping cut names to their desired active state
+     |                          e.g., {"cut_name_1": False, "cut_name_2": True}
+     |
+     |  toggle_group(self, group_dict)
+     |      Utility to set entire group(s) of cuts as inactive or active
+     |
+     |      Args:
+     |          group_dict (dict): Dictionary mapping group names to their desired active state
+     |                            e.g., {"quality_cuts": False, "momentum_cuts": True}
+     |
+     |  ----------------------------------------------------------------------
+```
+    
+</details>
+
+---
 
 #### `pyvector`
 

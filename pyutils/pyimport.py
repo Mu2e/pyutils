@@ -9,7 +9,7 @@ class Importer:
     Intended to used via by the pyprocess Processor class
     """
     
-    def __init__(self, file_name, branches, tree_path="EventNtuple/ntuple", use_remote=False, location="tape", schema="root", verbosity=1):
+    def __init__(self, file_name, branches, tree_path="EventNtuple/ntuple", use_remote=False, location="disk", schema="root", verbosity=1):
         """Initialise the importer
         
         Args:
@@ -20,6 +20,7 @@ class Importer:
             location: Remote files only. File location: tape (default), disk, scratch, nersc 
             schema: Remote files only. Schema used when writing the URL: root (default), http, path, dcap, samFile
             verbosity: Print detail level (0: minimal, 1: medium, 2: maximum) 
+            
         """
         self.file_name = file_name
         self.branches = branches
@@ -39,7 +40,7 @@ class Importer:
             use_remote=self.use_remote,
             location=self.location,
             schema=self.schema,
-            verbosity=self.verbosity 
+            verbosity=self.verbosity
         )
         
     def import_branches(self):
@@ -48,13 +49,9 @@ class Importer:
         Returns:
             Awkward array with imported data
         """
-
-        # Get uproot object
-        # Init file variable before try block
-        # Reader has it's own try blocks
-        file = self.reader.read_file(self.file_name) 
-        
         try:
+            # Open file 
+            file = self.reader.read_file(self.file_name) 
             # Access the tree
             components = self.tree_path.split('/')
             current = file
@@ -68,11 +65,6 @@ class Importer:
                     return None
             # Set tree
             tree = current 
-            
-            # # Print tree info 
-            # self.logger.log("Accessing branches in tree:", "max")
-            # if self.verbosity > 1:
-            #     tree.show(self.branches, interpretation_width=100)
                 
             # Result container
             result = {}
@@ -118,7 +110,7 @@ class Importer:
     
         except Exception as e:
             self.logger.log(f"Exception getting branches in file {self.file_name}: {e}", "error")
-            return None
+            raise # Propagate exception
 
         finally:
             # Ensure the file is closed

@@ -171,9 +171,12 @@ class Select:
         
         Args:
             data (awkward.Array): Input array containing segments branch
-            surface_name (str) : official name of the intersected surface 
+            surface_name (str) : Official name of the intersected surface. Defaults to "TT_Front". 
             sindex (int, optional): Index to the intersected surface (for multi-surface elements). Defaults to 0. 
-            branch_name (str, optional): Name of the segments branch for backwards compatibility. Defaults to 'trksegs'
+            branch_name (str, optional): Name of the segments branch for backwards compatibility. Defaults to 'trksegs'.
+
+        Notes: 
+            See https://github.com/Mu2e/Offline/blob/main/DataProducts/inc/SurfaceId.hh for surface_names.
         """
         # convert the string to the int underneath
         sid = self.get_surface_name(surface_name)
@@ -330,7 +333,6 @@ class Select:
         """
         try:
             # Construct & return mask
-            # Why nactive and not nhits?
             mask = (data["trk.nactive"] >= n_hits)
             self.logger.log(f"Returning mask for nactive > {n_hits}", "success")
             return mask

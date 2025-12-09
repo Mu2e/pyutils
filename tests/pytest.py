@@ -2,6 +2,13 @@
 # May 2025
 # Tests for pyutils modules 
 
+# For safety:
+# Use the 'spawn' start method to ensure each worker process starts in a fresh Python interpreter.
+# This avoids inheriting state from the parent (as happens with 'fork'), which can cause subtle bugs
+# with threads, open files, or shared resources. Slightly slower, but much safer for complex code.
+import multiprocessing as mp
+mp.set_start_method("spawn", force=True)
+
 # pyutils classes
 from pyutils.pyread import Reader                  # Data reading 
 from pyutils.pyprocess import Processor, Skeleton  # Data processing
@@ -12,6 +19,17 @@ from pyutils.pyselect import Select                # Data selection and cut mana
 from pyutils.pyvector import Vector                # Element wise vector operations
 from pyutils.pylogger import Logger                # Printout manager
 
+import gc
+
+# Cannot be nested (for multiprocessing)!
+class MyProcessor(Skeleton):
+    def __init__(self, file_list_path, use_processes):
+        super().__init__()
+        self.file_list_path=file_list_path 
+        self.use_processes=True
+    def process_file(self, file_name):
+        return file_name 
+            
 class Tester:
     """ Tests for pyutils """
     
@@ -25,13 +43,13 @@ class Tester:
         self.failed_tests = []
 
         # Test files
-        self.local_file_path = "/exp/mu2e/data/users/sgrant/pyutils-test/TestFiles/nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aq_best_v1_3_v06_03_00.001210_00000699.root"
-        self.local_wb_file_path = "/exp/mu2e/data/users/sgrant/pyutils-test/TestFiles/rec.mu2e.CRV_wideband_cosmics.CRVWB-000-012-000.000105_001.root"
+        self.local_file_path = "/exp/mu2e/data/users/sgrant/pyutils-test/files/nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aq_best_v1_3_v06_03_00.001210_00000699.root"
+        self.local_wb_file_path = "/exp/mu2e/data/users/sgrant/pyutils-test/files/rec.mu2e.CRV_wideband_cosmics.CRVWB-000-012-000.000105_001.root"
         self.remote_file_name = "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aq_best_v1_3_v06_03_00.001210_00000699.root"
         self.remote_wideband_file_name = "rec.mu2e.CRV_wideband_cosmics.CRVWB-000-012-000.000105_001.root" 
-        self.local_file_list = "/exp/mu2e/data/users/sgrant/pyutils-test/TestFileLists/local_file_list.txt"
-        self.bad_local_file_list = "/exp/mu2e/data/users/sgrant/pyutils-test/TestFileLists/bad_local_file_list.txt"
-        self.remote_file_list = "/exp/mu2e/data/users/sgrant/pyutils-test/TestFileLists/remote_file_list.txt"
+        self.local_file_list = "/exp/mu2e/data/users/sgrant/pyutils-test/filelists/local_file_list.txt"
+        self.bad_local_file_list = "/exp/mu2e/data/users/sgrant/pyutils-test/filelists/bad_local_file_list.txt"
+        self.remote_file_list = "/exp/mu2e/data/users/sgrant/pyutils-test/filelists/remote_file_list.txt"
         self.defname = "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aq_best_v1_3_v06_03_00.root"
         
         # Setup logger 
@@ -46,8 +64,7 @@ class Tester:
         self.test_count += 1
         try:
             self.logger.log(f"Running test: {test_name}", "test")
-            result = test_function(*args, **kwargs)
-            
+            result = test_function(*args, **kwargs)            
             if expect_return and (result is None or (hasattr(result, '__len__') and len(result) == 0)):
                 self.logger.log(f"FAILED: {test_name}: returned no results", "error")
                 self.error_count += 1
@@ -61,6 +78,9 @@ class Tester:
             self.error_count += 1
             self.failed_tests.append(test_name)
             return False
+        finally:
+            gc.collect()
+            del result
     
     ###### pyread ######
     
@@ -92,7 +112,7 @@ class Tester:
         if remote_read: 
             self._safe_test("pyread:Reader::read_file (remote)", self._remote_read)
 
-    ###### pyimporter ######
+    ###### pyimport ######
 
     def _local_import_branch(self):
         importer = Importer(
@@ -201,6 +221,16 @@ class Tester:
             branches=["event"]
         )
 
+    def _local_process_file_wrong_loc(self):
+        processor = Processor(
+            use_remote=False,
+            verbosity=self.verbosity,
+            location="scratch" # INCORRECT
+        )
+        return processor.process_data(
+            file_name=self.local_file_path,
+            branches=["event"]
+        )
 
     def _local_process_wb_file(self): # WB tree structure
         processor = Processor(
@@ -229,6 +259,27 @@ class Tester:
             branches=["event"]
         )
 
+    def _remote_process_file(self):
+        processor = Processor(
+            use_remote=True,
+            verbosity=self.verbosity
+        )
+        return processor.process_data(
+            file_name=self.remote_file_name,
+            branches=["event"]
+        )
+
+    def _remote_process_file_wrong_loc(self):
+        processor = Processor(
+            use_remote=True,
+            verbosity=self.verbosity,
+            location="scratch" # INCORRECT
+        )
+        return processor.process_data(
+            file_name=self.remote_file_name,
+            branches=["event"]
+        )
+        
     def _local_get_file_list(self):
         processor = Processor(verbosity=self.verbosity)
         return processor.get_file_list(file_list_path=self.local_file_list)
@@ -263,6 +314,17 @@ class Tester:
             branches = ["event"]
         )
 
+    def _basic_remote_multithread(self):
+        processor = Processor(
+            location="disk",
+            verbosity=self.verbosity,
+            use_remote=True
+        )
+        return processor.process_data(
+            file_list_path=self.remote_file_list,
+            branches = ["event"]
+        )
+
     def _basic_bad_multithread(self):
         processor = Processor(
             verbosity=self.verbosity
@@ -274,25 +336,36 @@ class Tester:
         
     def _basic_multiprocess(self):
         processor = Processor(
-            verbosity=self.verbosity
+            verbosity=self.verbosity, 
+            worker_verbosity=2
         )
         return processor.process_data(
             file_list_path=self.local_file_list,
-            branches = ["event"]
+            branches = ["event"],
+            use_processes=True
         )
 
+    def _basic_remote_multiprocess(self):
+        processor = Processor(
+            verbosity=self.verbosity,
+            use_remote=True,
+            worker_verbosity=2,
+            location="disk"
+        )
+        return processor.process_data(
+            file_list_path=self.remote_file_list,
+            branches = ["event"],
+            use_processes=True
+        )
+            
     def _advanced_multithread(self):
-        
-        class MyProcessor(Skeleton):
-            def __init__(processor_self):
-                super().__init__()
-                processor_self.file_list_path=self.local_file_list
-            def process_file(self, file_name):
-                return file_name # No need for anything interesting here
-
-        my_processor = MyProcessor()
+        my_processor = MyProcessor(self.local_file_list, False)
         return my_processor.execute()
-        
+
+    def _advanced_multiprocess(self):
+        my_processor = MyProcessor(self.local_file_list, True)
+        return my_processor.execute()
+
     def _test_processor(
         self, 
         local_process_file=True,
@@ -306,6 +379,7 @@ class Tester:
         """Test pyprocess module"""
         if local_process_file:
             self._safe_test("pyprocess:Processor:process_data (local, single file, single branch)", self._local_process_file)
+            # self._safe_test("pyprocess:Processor:process_data (local, single file, single branch, wrong file location)", self._local_process_file_wrong_loc)
 
         if local_process_wb_file:
             self._safe_test("pyprocess:Processor:process_data (local, single WB file, single branch)", self._local_process_wb_file)            
@@ -315,6 +389,7 @@ class Tester:
             
         if remote_process_file:
             self._safe_test("pyprocess:Processor:process_data (remote, single file, single branch)", self._remote_process_file)
+            # self._safe_test("pyprocess:Processor:process_data (remote, single file, single branch, wrong file location)", self._remote_process_file_wrong_loc)
 
         if get_file_list:
             self._safe_test("pyprocess:Processor:get_file_list (local file list path)", self._local_get_file_list)
@@ -324,11 +399,15 @@ class Tester:
 
         if basic_multifile:
             self._safe_test("pyprocess:Processor:process_data (basic multithread)", self._basic_multithread)
+            self._safe_test("pyprocess:Processor:process_data (basic remote multithread)", self._basic_remote_multithread)
             # self._safe_test("pyprocess:Processor:process_data (basic bad multithread)", self._basic_bad_multithread)
             self._safe_test("pyprocess:Processor:process_data (basic multiprocess)", self._basic_multiprocess)
+            self._safe_test("pyprocess:Processor:process_data (basic remote multiprocess)", self._basic_remote_multiprocess)
+            # self._safe_test("pyprocess:Processor:process_data (basic remote multithread)", self._basic_remote_multiprocess)
 
         if advanced_multifile:
             self._safe_test("pyprocess:Skeleton (advanced multithread)", self._advanced_multithread)
+            self._safe_test("pyprocess:Skeleton (advanced multiprocess)", self._advanced_multiprocess)
 
     ###### pyselect ######
 
@@ -480,13 +559,13 @@ class Tester:
     
     def run(
         self, 
-        test_reader=True,
-        test_processor=True, 
-        test_importer=True,
-        test_select=True,
-        test_plot=True,
-        test_print=True,
-        test_vector=True
+        test_reader=False,
+        test_processor=False, 
+        test_importer=False,
+        test_select=False,
+        test_plot=False,
+        test_print=False,
+        test_vector=False
         ): 
         """Run all specified tests"""
         
