@@ -31,7 +31,6 @@ def main():
   
   mc_example = MC()
   mc_example.count_particle_types(data)
-  MC.is_track_particle(data)
   
 if __name__ == "__main__":
     main()
