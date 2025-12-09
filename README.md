@@ -991,6 +991,50 @@ class MC(builtins.object)
      |      Returns:
      |          particle_count_return : list of primary codes associated with input data 1 per event
      |
+     |   is_track_particle(self, data):
+     |       function looks at tracks and finds particle with most contributions
+     |
+     |
+     |   is_muon(self, data):
+     |    return mask for all events with true muon 
+     |    
+     |   is_electron(self, data):
+     |     return mask for all events with true electron 
+     |     
+     |   is_positron(self, data):
+     |     return mask for all events with true e+n 
+     |     
+     |         
+     |   is_particle(self, data, code):
+     |     returns true if the trkmcsim has pdg code for chosen particle 
+     |
+     |
+     |   start_process(self, data, process):
+     |     returns true if the trkmcsim has process code for chosen start code 
+     |
+     |   stop_process(self, data, process):
+     |    returns true if the trkmcsim has process code for chosen stop code
+     |        
+     |   is_CeMinusEndpoint(self, data):
+     |     returns true if the trkmcsim has process code for ce- endpoint generator 
+     |
+     |
+     |   is_CeMinusLeadingLog(self, data):
+     |     returns true if the trkmcsim has process code for ce- leading log generator 
+     |
+     |   is_CePlusEndpoint(self, data):
+     |     returns true if the trkmcsim has process code for ce+ endpoint generator 
+     |
+     |   is_CePlusLeadingLog(self, data):
+     |     returns true if the trkmcsim has process code for ce+ leading log generator 
+     |
+     |   is_target_DIO(self, data):
+     |     returns true if the trkmcsim has a DIO process code and originates at radius consistant with target
+     |      
+     |     
+     |   is_cosmic(self, data):
+     |     returns true if the trkmcsim is a cosmic generated particle 
+     |
      |  ----------------------------------------------------------------------
   
 ```
@@ -1029,19 +1073,19 @@ class Display:
       * muse setup
       * assumes local copy of EventDisplay via clone or musing
     """
-    def __init__(self, verbosity=1):
+    __init__(self, verbosity=1):
       # Start logger
       self.logger = Logger( 
           print_prefix = "[pydisplay]", 
           verbosity = verbosity
       )
     
-    def pick_event(self, dataset, run, subrun, event):
+    pick_event(self, dataset, run, subrun, event):
       """ use pickEvent tool to extract event, run, subrun from given data set """
       result = subprocess.run(['pickEvent', '-e','-v',str(dataset),' ',str(run)+'/'+str(subrun)+'/'+str(event)], capture_output=True, text=True)
       print(result.stdout)
     
-    def launch_display(self, dataset, run, subrun, event):
+    launch_display(self, dataset, run, subrun, event):
       """ launches the mu2e event display 
       """
       launch_display = subprocess.run(['mu2e','-c','EventDisplay/examples/nominal_example.fcl', str(dataset)+'_'+str(run)+'_'+str(subrun)+'_'+str(event)+'.art'], capture_output=True, text=True)
