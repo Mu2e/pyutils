@@ -121,47 +121,27 @@ class MC:
         
   def is_CeMinusEndpoint(self, data):
     """ returns true if the trkmcsim has process code for ce- endpoint generator """
-    try:
-        mask = (data['trkmcsim', 'startCode'] == 167)
-        self.logger.log(f"Returning mask for is_CeMinusEndpoint", "success")
-        return mask
-    except Exception as e:
-        self.logger.log(f"Exception in is_CeMinusEndpoint: {e}", "error")
-        return None
+    mask = start_process( data, 167)
+    return mask
 
   def is_CeMinusLeadingLog(self, data):
     """ returns true if the trkmcsim has process code for ce- leading log generator """
-    try:
-        mask = (data['trkmcsim', 'startCode'] == 168)
-        self.logger.log(f"Returning mask for is_CeMinusLeadingLog", "success")
-        return mask
-    except Exception as e:
-        self.logger.log(f"Exception in is_CeMinusLeadingLog: {e}", "error")
-        return None
+    mask = start_process( data, 168)
+    return mask
 
   def is_CePlusEndpoint(self, data):
     """ returns true if the trkmcsim has process code for ce+ endpoint generator """
-    try:
-        mask = (data['trkmcsim', 'startCode'] == 169)
-        self.logger.log(f"Returning mask for is_CePlusEndpoint", "success")
-        return mask
-    except Exception as e:
-        self.logger.log(f"Exception in is_CePlusEndpoint: {e}", "error")
-        return None
+    mask = start_process( data, 169)
+    return mask
 
   def is_CePlusLeadingLog(self, data):
     """ returns true if the trkmcsim has process code for ce+ leading log generator """
-    try:
-        mask = (data['trkmcsim', 'startCode'] == 170)
-        self.logger.log(f"Returning mask for is_CePlusLeadingLog", "success")
-        return mask
-    except Exception as e:
-        self.logger.log(f"Exception in is_CePlusLeadingLog: {e}", "error")
-        return None
-
+    mask = start_process( data, 170)
+    return mask
+    
   def is_target_DIO(self, data):
     """ returns true if the trkmcsim has a DIO process code and originates at radius consistant with target
-     """
+    """
     try:
         # Need to separate from IPA DIO
         vector = Vector()
