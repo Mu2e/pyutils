@@ -8,7 +8,7 @@
 
 ### on Mu2e machines using Mu2e supported environment
 
-`pyutils` is designed to work with packages installed in the Mu2e Python environment, which is currently maintained by the L4 for Analysis Interfaces, Sam Grant.
+`pyutils` is designed to work with packages installed in the Mu2e Python environment, which is currently maintained by the Analysis Tools Group Leaders Andy Edmonds and Sophie Middleton along with L4 for Analysis Interfaces, Sam Grant.
 
 To activate the environment, first run `mu2einit` and then **one** `pyenv` command, like
 
@@ -49,6 +49,7 @@ pycut       # Cut management
 pyvector    # Element wise wector operations
 pymcutil    # Monte Carlo utilities (coming soon)
 pylogger    # Helper module for managing printouts
+pydisplay   # allows user to call Mu2e/EventDisplay directly through python
 ```
 
 ### 2.1 Demos and tutorials
@@ -60,6 +61,23 @@ To learn by example, follow the `pyutils` tutorial series.
 1. [pyutils_multifile.ipynb](examples/notebooks/pyutils_multifile.ipynb) - Basic parallelisation with file lists and SAM definitions, as well as complex parallelised analysis tasks using the `pyprocess` `Skeleton` template class.
 1. [pyplot_demo.ipynb](examples/notebooks/pyplot_demo.ipynb) - A comprehensive demonstration of the `pyplot.Plot` class.
 1. [pycut_demo.ipynb](examples/notebooks/pycut_demo.ipynb) - A comprehensive demonstration of the `pycut.CutManager` class.
+1. [pyutils_mctruth.ipynb](examples/notebooks/pyutils_mctruth.ipynb) - Examples of how to use the mc truth interface for simulation based studies.
+
+To open a jupyter notebook on the mu2e machines:
+
+```
+jupyter-lab --no-browser #--port 1234 
+```
+
+replacing `1234` with a chosen port number. The default is  `8888`. On your local machine create a ssh tunnel:
+
+```
+ssh -KXY -L 08888:localhost:08888 <user>@mu2egpvm0<machine>.fnal.gov
+```
+
+replacing the port (8888) with your chosen number and the user with your username and mu2e machine ID with that on which you launched jupyter-lab.
+
+To connect to the notebook copy the URL with the unique token printed in the terminal of the mu2e machine into your local browser.
 
 ### 2.2 Module documentation 
 
@@ -551,7 +569,6 @@ CLASSES
 
 Tools for creating and managing selection cut masks. 
 
->**Note**: `MakeMask` and `MakeMaskList` may need revisiting; CutManager class for complex analyses coming soon. 
 
 <details>
 <summary>Click for details</summary>
@@ -570,12 +587,6 @@ CLASSES
      |  Class for standard selection cuts with EventNtuple data in Awkward format
      |
      |  Methods defined here:
-     |
-     |  MakeMask(self, branch, treename, leaf, eql, v1, v2=None)
-     |      makes a mask for the chosen branch/leaf v1 = min, v2 = max, use eql if you want it == v1
-     |
-     |  MakeMaskList(self, branch, treenames, leaves, eqs, v1s, v2s)
-     |      makes a mask for the chosen branch/leaf v1 = min, v2 = max, use eql if you want it == v1
      |
      |  __init__(self, verbosity=1)
      |      Initialise the selector
@@ -649,14 +660,15 @@ CLASSES
      |          data (awkward.Array): Input array containing the segments branch
      |          branch_name (str, optional): Name of the segments branch for backwards compatibility. Defaults to 'trksegs'
      |
-     |  select_surface(self, data, sid, sindex=0, branch_name='trksegs')
-     |      Return boolean array for track segments intersecting a specific surface
-     |
-     |      Args:
-     |          data (awkward.Array): Input array containing segments branch
-     |          sid (int): ID of the intersected surface
-     |          sindex (int, optional): Index to the intersected surface (for multi-surface elements). Defaults to 0.
-     |          branch_name (str, optional): Name of the segments branch for backwards compatibility. Defaults to 'trksegs'
+     |  select_surface(self, data, surface_name="TT_Front", sindex=0, branch_name="trksegs"):
+     |     Return boolean array for track segments intersecting a specific surface 
+     |   
+     |   Args:
+     |       data (awkward.Array): Input array containing segments branch
+     |       surface_name (str) : official name of the intersected surface 
+     |       sindex (int, optional): Index to the intersected surface (for multi-surface elements). Defaults to 0. 
+     |       branch_name (str, optional): Name of the segments branch for backwards compatibility. Defaults to 'trksegs'
+     |   
      |
      |  select_trkqual(self, data, quality)
      |      Return boolean array for tracks above a specified quality
@@ -664,6 +676,200 @@ CLASSES
      |      Args:
      |          data (awkward.Array): Input array containing the trkqual.result branch
      |          quality (float): The numerical output of the MVA
+     |
+     |   has_ST(self, data):
+     |      Returns mask True if the event has at least 1 ST viable extrapolation
+     | 
+     |   has_OPA(self, data):
+     |      Returns mask True if the event has at no OPA viable extrapolation
+     | 
+     |
+     |   select_trkpid(self, data, value):
+     |     Return boolean array for tracks above a specified PID score (range 0 - 1, -1=No score)   
+     |
+     |     Args: 
+     |       data (awkward.Array): Input array containing the trkqual.result branch
+     |       value (float): The numerical output of the MVA
+     |
+     |    get_trigger(self, data, name):
+     |       Return boolean array for the chosen trigger name 
+     |       Args: 
+     |           data (awkward.Array): Input array containing the data and including the trigger branches which you want to select
+     |           name : name of the trigger
+     |           usage: get_trigger(data, "trig_tprHelixDe_ipa")
+     |           
+     |     get_triggers(self, data, names):
+     |    
+     |      Return a single boolean array (mask) for events where ALL specified triggers are true (== 1).
+     |
+     |       Assumes all 'names' exist as branches in 'data' and contain only 0s or 1s.
+     |
+     |       Args: 
+     |           data (awkward.Array): Input array containing the data and the trigger branches.
+     |           names (list[str]): A list of trigger names.
+     |           
+     |       Usage: 
+     |           combined_mask = get_triggers(data, ["trig_tprHelixDe_ipa", "another_trigger_name"])
+     |
+     |  ----------------------------------------------------------------------
+```
+    
+</details>
+
+---
+#### `pycut`
+
+A comprehensive framework for managing analysis cuts.
+
+<details>
+<summary>Click for details</summary>
+
+## Features 
+
+### Cut definition and management
+- **`add_cut(name, description, mask, active=True, group=None)`** - Define analysis cuts with boolean masks
+- **`toggle_cut(cut_dict)`** - Enable/disable individual cuts using dictionary mapping
+- **`toggle_group(group_dict)`** - Enable/disable entire groups of cuts 
+
+### Cut flow generation
+- **`create_cut_flow(data)`** - Generate detailed cut flow showing progressive event retention
+- **`format_cut_flow(cut_flow)`** - Format cut flow as `pandas` DataFrame
+- **`combine_cut_flows(cut_flow_list)`** - Combine multiple cut flows (useful for multiprocessing)
+
+### Selection application
+- **`combine_cuts(cut_names=None, active_only=True)`** - Generate combined boolean mask from selected cuts
+- **`get_active_cuts()`** - Retrieve currently active cuts for inspection
+
+### State management
+- **`save_state(state_name)`** - Save current cut configuration for later restoration
+- **`restore_state(state_name)`** - Restore previously saved cut configuration
+- **`restore_original_state()`** - Reset all cuts to their initial active states
+- **`list_saved_states()`** - Display all available saved configurations
+
+### Organisation and inspection
+- **`get_groups()`** - Retrieve cuts organised by group membership
+- **`list_groups()`** - Display summary of all groups and their cut contents
+
+## Typical workflow
+
+1. Define cuts using `add_cut()` with appropriate groups
+2. Generate baseline cut flow with `create_cut_flow()`
+3. Save nominal configuration with `save_state()`
+4. Create alternative configurations using `toggle_cut()` or `toggle_group()`
+5. Compare efficiencies between configurations
+6. Apply selected cuts using `combine_cuts()` for analysis
+7. Restore configurations as needed with `restore_state()`
+
+The module integrates well with the broader pyutils ecosystem, working with data processed by `pyprocess` and selections created by `pyselect`.
+
+```
+Help on module pyutils.pycut in pyutils:
+
+NAME
+    pyutils.pycut
+
+CLASSES
+    builtins.object
+        CutManager
+
+    class CutManager(builtins.object)
+     |  CutManager(verbosity=1)
+     |
+     |  Class to manage analysis cuts
+     |
+     |  Methods defined here:
+     |
+     |  __init__(self, verbosity=1)
+     |      Initialise
+     |
+     |      Args:
+     |          verbosity (int, optional): Printout level (0: minimal, 1: normal, 2: detailed)
+     |
+     |  add_cut(self, name, description, mask, active=True, group=None)
+     |      Add a cut to the collection.
+     |
+     |      Args:
+     |          name (str): Name of the cut
+     |          description (str): Description of what the cut does
+     |          mask (awkward.Array): Boolean mask array for the cut
+     |          active (bool, optional): Whether the cut is active by default
+     |          group (str, optional): Group name for organizing cuts
+     |
+     |  combine_cut_flows(self, cut_flow_list, format_as_df=True)
+     |      Combine a list of cut flows after multiprocessing
+     |
+     |      Args:
+     |          cut_flows: List of cut statistics lists from different files
+     |          format_as_df (bool, optional): Format output as a pd.DataFrame. Defaults to True.
+     |
+     |      Returns:
+     |          list: Combined cut statistics
+     |
+     |  combine_cuts(self, cut_names=None, active_only=True)
+     |      Return a Boolean combined mask from specified cuts. Applies an AND operation across all cuts.
+     |      Args:
+     |
+     |      cut_names (list, optional): List of cut names to include (if None, use all cuts)
+     |      active_only (bool, optional): Whether to only include active cuts
+     |
+     |  create_cut_flow(self, data)
+     |      Utility to calculate cut flow from array and cuts object
+     |
+     |      Args:
+     |          data (awkward.Array): Input data
+     |
+     |  format_cut_flow(self, cut_flow, include_group=True)
+     |      Format cut flow as a DataFrame with more readable column names
+     |
+     |      Args:
+     |          cut_flow (dict): The cut flow to format
+     |          include_group (bool, optional): Whether to include group column
+     |      Returns:
+     |          df_cut_flow (pd.DataFrame)
+     |
+     |  get_active_cuts(self)
+     |      Utility to get all active cutss
+     |
+     |  get_groups(self)
+     |      Get all unique group names and their cuts
+     |
+     |      Returns:
+     |          dict: Dictionary mapping group names to lists of cut names
+     |
+     |  list_groups(self)
+     |      Print all groups and their cuts
+     |
+     |  list_saved_states(self)
+     |      List all saved states
+     |
+     |  restore_original_state(self)
+     |      Restore all cuts to their original active states (as defined when added)
+     |
+     |  restore_state(self, state_name='default')
+     |      Restore previously saved cut states
+     |
+     |      Args:
+     |          state_name (str): Name of the saved state to restore
+     |
+     |  save_state(self, state_name='default')
+     |      Save current active states of all cuts
+     |
+     |      Args:
+     |          state_name (str): Name for this saved state
+     |
+     |  toggle_cut(self, cut_dict)
+     |      Utility to set cut(s) as inactive or active based on input dictionary
+     |
+     |      Args:
+     |          cut_dict (dict): Dictionary mapping cut names to their desired active state
+     |                          e.g., {"cut_name_1": False, "cut_name_2": True}
+     |
+     |  toggle_group(self, group_dict)
+     |      Utility to set entire group(s) of cuts as inactive or active
+     |
+     |      Args:
+     |          group_dict (dict): Dictionary mapping group names to their desired active state
+     |                            e.g., {"quality_cuts": False, "momentum_cuts": True}
      |
      |  ----------------------------------------------------------------------
 ```
@@ -874,6 +1080,12 @@ CLASSES
      |          branch (awkward.Array): The branch, such as trgsegs or crvcoincs
      |          vector_name: The parameter associated with the vector, such as 'mom' or 'pos'
      |
+     |   get_rho(self, branch, vector_name):
+     |       Return an array of vector rho (transverse magnitude) for specified branch
+     |
+     |    Args:
+     |        branch (awkward.Array): The branch, such as trksegs or crvcoincs
+     |        vector_name: The parameter associated with the vector, such as 'mom' or 'pos'
      |  ----------------------------------------------------------------------
 ```
 
@@ -956,6 +1168,50 @@ class MC(builtins.object)
      |      Returns:
      |          particle_count_return : list of primary codes associated with input data 1 per event
      |
+     |   is_track_particle(self, data):
+     |       function looks at tracks and finds particle with most contributions
+     |
+     |
+     |   is_muon(self, data):
+     |    return mask for all events with true muon 
+     |    
+     |   is_electron(self, data):
+     |     return mask for all events with true electron 
+     |     
+     |   is_positron(self, data):
+     |     return mask for all events with true e+n 
+     |     
+     |         
+     |   is_particle(self, data, code):
+     |     returns true if the trkmcsim has pdg code for chosen particle 
+     |
+     |
+     |   start_process(self, data, process):
+     |     returns true if the trkmcsim has process code for chosen start code 
+     |
+     |   stop_process(self, data, process):
+     |    returns true if the trkmcsim has process code for chosen stop code
+     |        
+     |   is_CeMinusEndpoint(self, data):
+     |     returns true if the trkmcsim has process code for ce- endpoint generator 
+     |
+     |
+     |   is_CeMinusLeadingLog(self, data):
+     |     returns true if the trkmcsim has process code for ce- leading log generator 
+     |
+     |   is_CePlusEndpoint(self, data):
+     |     returns true if the trkmcsim has process code for ce+ endpoint generator 
+     |
+     |   is_CePlusLeadingLog(self, data):
+     |     returns true if the trkmcsim has process code for ce+ leading log generator 
+     |
+     |   is_target_DIO(self, data):
+     |     returns true if the trkmcsim has a DIO process code and originates at radius consistant with target
+     |      
+     |     
+     |   is_cosmic(self, data):
+     |     returns true if the trkmcsim is a cosmic generated particle 
+     |
      |  ----------------------------------------------------------------------
   
 ```
@@ -994,19 +1250,19 @@ class Display:
       * muse setup
       * assumes local copy of EventDisplay via clone or musing
     """
-    def __init__(self, verbosity=1):
+    __init__(self, verbosity=1):
       # Start logger
       self.logger = Logger( 
           print_prefix = "[pydisplay]", 
           verbosity = verbosity
       )
     
-    def pick_event(self, dataset, run, subrun, event):
+    pick_event(self, dataset, run, subrun, event):
       """ use pickEvent tool to extract event, run, subrun from given data set """
       result = subprocess.run(['pickEvent', '-e','-v',str(dataset),' ',str(run)+'/'+str(subrun)+'/'+str(event)], capture_output=True, text=True)
       print(result.stdout)
     
-    def launch_display(self, dataset, run, subrun, event):
+    launch_display(self, dataset, run, subrun, event):
       """ launches the mu2e event display 
       """
       launch_display = subprocess.run(['mu2e','-c','EventDisplay/examples/nominal_example.fcl', str(dataset)+'_'+str(run)+'_'+str(subrun)+'_'+str(event)+'.art'], capture_output=True, text=True)
@@ -1046,3 +1302,4 @@ Your changes will be automatically be applied to the `pyutils` installed in your
 ## Contact
 
 Reach out via Slack (#analysis-tools or #analysis-tools-devel) if you need help or would like to contribute.
+
