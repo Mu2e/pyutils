@@ -1,20 +1,31 @@
 #! /usr/bin/env python
 
-# Global setting to toggle emojis
+# Global settings
 USE_EMOJIS = False
+USE_COLORS = False
 
 class Logger:
     """Helper class for consistent logging with emoji indicators
     """ 
+    # ANSI colour codes
+    COLORS = {
+        "red": "\033[91m",
+        "green": "\033[92m",
+        "yellow": "\033[93m",
+        "blue": "\033[94m",
+        "magenta": "\033[95m",
+        "reset": "\033[0m"
+    }
+
     # Define log levels with their corresponding emojis at class level
     LOG_LEVELS = {
-        "error": {"emoji": "❌", "text": "[ERROR]", "level": 0},
-        "test": {"emoji": "🧪", "text": "[TEST]", "level": 0},
-        "info": {"emoji": "⭐️", "text": "[INFO]", "level": 1},
-        "success": {"emoji": "✅", "text": "[OK]", "level": 1},
-        "warning": {"emoji": "⚠️", "text": "[WARN]", "level": 1},
-        "max": {"emoji": "👀", "text": "[DEBUG]", "level": 2}
-    }   
+        "error": {"emoji": "❌", "text": "[ERROR]", "level": 0, "color": "red"},
+        "test": {"emoji": "🧪", "text": "[TEST]", "level": 0, "color": "magenta"},
+        "info": {"emoji": "⭐️", "text": "[INFO]", "level": 1, "color": "blue"},
+        "success": {"emoji": "✅", "text": "[OK]", "level": 1, "color": "green"},
+        "warning": {"emoji": "⚠️ ", "text": "[WARN]", "level": 1, "color": "yellow"},
+        "max": {"emoji": "👀", "text": "[DEBUG]", "level": 2, "color": "magenta"}
+    }
 
     def __init__(self, verbosity=1, print_prefix="[pylogger]"): 
         """Initialize the Logger
@@ -38,16 +49,18 @@ class Logger:
         if level_name is None:
             level_name = self._detect_level(message)
 
-        # Check global at log time
+        # Check globals at log time
         level_info = self.LOG_LEVELS[level_name]
         icon = level_info["emoji"] if USE_EMOJIS else level_info["text"]
-        
+        color = self.COLORS[level_info["color"]] if USE_COLORS else ""
+        reset = self.COLORS["reset"]
+  
         # Get level value
         level_value = level_info["level"]
 
         # Only print if the inherited verbosity is high enough
         if self.verbosity >= level_value:
-            print(f"{self.print_prefix} {icon} {message}")
+            print(f"{self.print_prefix} {color}{icon}{reset} {message}")
     
     def _detect_level(self, message):
         """Automatically detect appropriate log level based on message content
