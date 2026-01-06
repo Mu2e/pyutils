@@ -1,8 +1,21 @@
 #! /usr/bin/env python
+
+# Global setting to toggle emojis
+USE_EMOJIS = False
+
 class Logger:
     """Helper class for consistent logging with emoji indicators
     """ 
-    
+    # Define log levels with their corresponding emojis at class level
+    LOG_LEVELS = {
+        "error": {"emoji": "❌", "text": "[ERROR]", "level": 0},
+        "test": {"emoji": "🧪", "text": "[TEST]", "level": 0},
+        "info": {"emoji": "⭐️", "text": "[INFO]", "level": 1},
+        "success": {"emoji": "✅", "text": "[OK]", "level": 1},
+        "warning": {"emoji": "⚠️", "text": "[WARN]", "level": 1},
+        "max": {"emoji": "👀", "text": "[DEBUG]", "level": 2}
+    }   
+
     def __init__(self, verbosity=1, print_prefix="[pylogger]"): 
         """Initialize the Logger
         
@@ -13,15 +26,6 @@ class Logger:
         self.verbosity = verbosity
         self.print_prefix = print_prefix
         
-        # Define log levels with their corresponding icons
-        self.LOG_LEVELS = {
-            "error": {"icon": "❌", "level": 0},
-            "test": {"icon": "🧪", "level": 0}, # for pytest
-            "info": {"icon": "⭐️", "level": 1},
-            "success": {"icon": "✅", "level": 1},
-            "warning": {"icon": "⚠️", "level": 1},
-            "max": {"icon": "👀", "level": 2}
-        }
         
     def log(self, message, level_name=None):
         """Print a message based on verbosity level
@@ -34,12 +38,13 @@ class Logger:
         if level_name is None:
             level_name = self._detect_level(message)
 
-        # Get icon 
-        icon = self.LOG_LEVELS[level_name]["icon"]
-
-        # Get level value
-        level_value = self.LOG_LEVELS[level_name]["level"]
+        # Check global at log time
+        level_info = self.LOG_LEVELS[level_name]
+        icon = level_info["emoji"] if USE_EMOJIS else level_info["text"]
         
+        # Get level value
+        level_value = level_info["level"]
+
         # Only print if the inherited verbosity is high enough
         if self.verbosity >= level_value:
             print(f"{self.print_prefix} {icon} {message}")
