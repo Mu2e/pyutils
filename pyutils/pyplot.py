@@ -37,7 +37,7 @@ class Plot:
             verbosity = verbosity
         )
 
-        self.logger.log(f"Initialised Plot with {self.style_path.rsplit("/", 1)[-1]} and verbosity = {self.verbosity}", "info")
+        self.logger.log(f"Initialised Plot with {self.style_path.rsplit('/', 1)[-1]} and verbosity = {self.verbosity}", "info")
 
     def round_to_sig_fig(self, val, sf): 
         """
