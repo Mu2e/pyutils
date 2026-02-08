@@ -454,14 +454,18 @@ class Skeleton:
             use_processes=self.use_processes 
         )
 
+        # Postprocess
+        results = self.postprocess(results)
+
         self.logger.log(f"Analysis complete", "success")
             
         return results
 
-    def process_results(self): 
+    def postprocess(self, results): 
         """Run post processing on the results list 
+        Placeholder method! You can override it
         """
-        pass
+        return results
 
         # Such as combination 
         
