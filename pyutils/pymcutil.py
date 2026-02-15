@@ -19,11 +19,11 @@ class MC:
       """
       self.particle_count_return = None
       self.print_prefix = "[pymcutil] "
-      self.logger = Logger( 
-            print_prefix = "[pymcutil]", 
-            verbosity = verbosity
+      self.logger = Logger(
+        print_prefix = "[pymcutil]",
+        verbosity = verbosity
         )
-      print(f"{self.print_prefix}Initialised")
+      self.logger.log("Initialised", "info")
       
       
   def is_track_particle(self, data):
@@ -182,12 +182,12 @@ class MC:
 
     # Check for empty data
     if ak.num(data['trkmc'], axis=0) == 0:
-        print("No events found in the data.")
-        return []
+      self.logger.log("No events found in the data.", "warning")
+      return []
 
     if ak.num(data, axis=0) == 0:
-        print("No events found in the data.")
-        return []
+      self.logger.log("No events found in the data.", "warning")
+      return []
 
 
     proc_codes = ak.firsts(data['trkmcsim', 'startCode'], axis=1) 
@@ -244,18 +244,18 @@ class MC:
         -2:  (len(particle_count[ak.any(other_mask, axis=1)==True])),
     }
       
-    # Print the yields to terminal for cross-check
-    print("===== MC truth yields for full momentum and time range=====")
-    print("N_DIO: ", counts[166])
-    print("N_IPA: ", counts[0])
-    print("N_CEM: ", counts[168])
-    print("N_CEP: ", counts[176])
-    print("N_eRPC: ", counts[178])
-    print("N_iRPC: ", counts[179])
-    print("N_eRMC: ", counts[171])
-    print("N_iRMC: ", counts[172])
-    print("N_cosmic: ", counts[-1])
-    print("N_others: ", counts[-2])
+    # Log the yields for cross-check
+    self.logger.log("===== MC truth yields for full momentum and time range=====", "info")
+    self.logger.log(f"N_DIO: {counts[166]}", "info")
+    self.logger.log(f"N_IPA: {counts[0]}", "info")
+    self.logger.log(f"N_CEM: {counts[168]}", "info")
+    self.logger.log(f"N_CEP: {counts[176]}", "info")
+    self.logger.log(f"N_eRPC: {counts[178]}", "info")
+    self.logger.log(f"N_iRPC: {counts[179]}", "info")
+    self.logger.log(f"N_eRMC: {counts[171]}", "info")
+    self.logger.log(f"N_iRMC: {counts[172]}", "info")
+    self.logger.log(f"N_cosmic: {counts[-1]}", "info")
+    self.logger.log(f"N_others: {counts[-2]}", "info")
     
     primary_mask = particle_count_return != -2
 
@@ -263,6 +263,6 @@ class MC:
     particle_count_return = particle_count_return[primary_mask]
     particle_count_return = [[sublist[0]] for sublist in particle_count_return]
     particle_count_return = ak.flatten(particle_count_return, axis=None)
-    print("returned particle count length",len(particle_count_return))
+    self.logger.log(f"returned particle count length {len(particle_count_return)}", "info")
     
     return particle_count_return

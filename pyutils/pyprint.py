@@ -68,8 +68,8 @@ class Print:
                         value = self._set_precision(value)
                     except Exception as e:
                         self.logger.log(f"Exception on {full_field}: {e}", "error")
-                # Print array 
-                print(f"{full_field}: {value}")
+                # Log array output
+                self.logger.log(f"{full_field}: {value}", "info")
     
     def print_n_events(self, array, n_events=1):
         """
@@ -102,9 +102,9 @@ class Print:
         self.logger.log(f"Printing {n_events} event(s)...\n", "info")
         
         for i, event in enumerate(array, start=1): # Iterate event-by-event 
-            print("-"*85)
-            self.print_event(event) # Call self.print_event() 
-            print("-"*85)
-            print()
+            self.logger.log("-"*85, "info")
+            self.print_event(event) # Call self.print_event()
+            self.logger.log("-"*85, "info")
+            self.logger.log("", "info")
             if i == n_events: # Return if 'n_events' is reached
                 return 
