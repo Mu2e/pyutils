@@ -43,14 +43,12 @@ class Tester:
         self.failed_tests = []
 
         # Test files
-        self.local_file_path = "/exp/mu2e/data/users/sgrant/pyutils-test/files/nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aq_best_v1_3_v06_03_00.001210_00000699.root"
-        self.local_wb_file_path = "/exp/mu2e/data/users/sgrant/pyutils-test/files/rec.mu2e.CRV_wideband_cosmics.CRVWB-000-012-000.000105_001.root"
-        self.remote_file_name = "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aq_best_v1_3_v06_03_00.001210_00000699.root"
-        self.remote_wideband_file_name = "rec.mu2e.CRV_wideband_cosmics.CRVWB-000-012-000.000105_001.root" 
-        self.local_file_list = "/exp/mu2e/data/users/sgrant/pyutils-test/filelists/local_file_list.txt"
-        self.bad_local_file_list = "/exp/mu2e/data/users/sgrant/pyutils-test/filelists/bad_local_file_list.txt"
-        self.remote_file_list = "/exp/mu2e/data/users/sgrant/pyutils-test/filelists/remote_file_list.txt"
-        self.defname = "nts.mu2e.CeEndpointOnSpillTriggered.MDC2020aq_best_v1_3_v06_03_00.root"
+        self.local_file_path = "/exp/mu2e/data/users/mu2epro/ensembles/MDS3/MDS3a/merged_files_1/nts.mu2e.ensembleMDS3aMix1BB_CeMLeadingLog_1e-13_13629088.1_5.root"
+        self.remote_file_name = "nts.mu2e.ensembleMDS2cMix1BBTriggered.MDC2020-000.001201_00000081.root"
+        self.local_file_list = "tests/MDS_local.txt"
+        self.bad_local_file_list = "tests/MDS_local_corrupted.txt"
+        self.remote_file_list = "tests/MDS_remote.txt"
+        self.defname = "nts.mu2e.ensembleMDS2cMix1BBTriggered.MDC2020-000.001201_00000081.root"
         
         # Setup logger 
         self.logger = Logger(
@@ -182,7 +180,6 @@ class Tester:
     def _test_importer(
         self, 
         local_import_branch=True,
-        local_import_wb_branch=True,
         local_import_special_branch=True,
         remote_import_branch=True,
         local_import_grouped_branches=True,
@@ -194,8 +191,7 @@ class Tester:
         if local_import_branch:
             self._safe_test("pyimport:Importer:import_branches (local, single branch)", self._local_import_branch)
 
-        if local_import_wb_branch:
-            self._safe_test("pyimport:Importer:import_branches (local, single WB file, single branch)", self._local_import_wb_branch)            
+        
 
         if local_import_special_branch:
             self._safe_test("pyimport:Importer:import_branches (local, single file, special branches)", self._local_import_special_branch)     
@@ -232,15 +228,7 @@ class Tester:
             branches=["event"]
         )
 
-    def _local_process_wb_file(self): # WB tree structure
-        processor = Processor(
-            tree_path="run",
-            verbosity=self.verbosity
-        )
-        return processor.process_data(
-            file_name=self.local_wb_file_path,
-            branches=["runNumber"]
-        )
+    
 
     def _local_process_file_special_branch(self): # Branches with special characters in the name
         processor = Processor(verbosity=self.verbosity)
@@ -369,7 +357,6 @@ class Tester:
     def _test_processor(
         self, 
         local_process_file=True,
-        local_process_wb_file=True,
         local_process_file_special_branch=True,
         remote_process_file=True,
         get_file_list=True,
@@ -381,8 +368,7 @@ class Tester:
             self._safe_test("pyprocess:Processor:process_data (local, single file, single branch)", self._local_process_file)
             # self._safe_test("pyprocess:Processor:process_data (local, single file, single branch, wrong file location)", self._local_process_file_wrong_loc)
 
-        if local_process_wb_file:
-            self._safe_test("pyprocess:Processor:process_data (local, single WB file, single branch)", self._local_process_wb_file)            
+        
 
         if local_process_file_special_branch:
             self._safe_test("pyprocess:Processor:process_data (local, single file, special branches)", self._local_process_file_special_branch)     

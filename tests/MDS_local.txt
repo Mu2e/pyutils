@@ -1,0 +1,5 @@
+/exp/mu2e/data/users/mu2epro/ensembles/MDS3/MDS3a/merged_files_1/nts.mu2e.ensembleMDS3aMix1BB_CeMLeadingLog_1e-13_13629088.1_1.root
+/exp/mu2e/data/users/mu2epro/ensembles/MDS3/MDS3a/merged_files_1/nts.mu2e.ensembleMDS3aMix1BB_CeMLeadingLog_1e-13_13629088.1_2.root
+/exp/mu2e/data/users/mu2epro/ensembles/MDS3/MDS3a/merged_files_1/nts.mu2e.ensembleMDS3aMix1BB_CeMLeadingLog_1e-13_13629088.1_3.root
+/exp/mu2e/data/users/mu2epro/ensembles/MDS3/MDS3a/merged_files_1/nts.mu2e.ensembleMDS3aMix1BB_CeMLeadingLog_1e-13_13629088.1_4.root
+/exp/mu2e/data/users/mu2epro/ensembles/MDS3/MDS3a/merged_files_1/nts.mu2e.ensembleMDS3aMix1BB_CeMLeadingLog_1e-13_13629088.1_5.root

@@ -49,12 +49,18 @@ class Logger:
         if level_name is None:
             level_name = self._detect_level(message)
 
-        # Check globals at log time
-        level_info = self.LOG_LEVELS[level_name]
+        # Safely get level info (fallback to info)
+        level_info = self.LOG_LEVELS.get(level_name, self.LOG_LEVELS["info"])
         icon = level_info["emoji"] if USE_EMOJIS else level_info["text"]
-        color = self.COLORS[level_info["color"]] if USE_COLORS else ""
-        reset = self.COLORS["reset"]
-  
+
+        # Apply colours only when enabled
+        if USE_COLORS:
+            color = self.COLORS.get(level_info.get("color"), "")
+            reset = self.COLORS["reset"]
+        else:
+            color = ""
+            reset = ""
+
         # Get level value
         level_value = level_info["level"]
 
@@ -72,16 +78,18 @@ class Logger:
             str: Detected log level name
         """
 
-        # Convert message to lower case 
+        # Convert message to lower case
         message = message.lower()
 
         if "error" in message or "fail" in message:
             return "error"
         elif "complete" in message or "success" in message or "done" in message:
             return "success"
-        elif "warn" in message:
+        elif "warn" in message or "warning" in message:
             return "warning"
-        elif "max" or "debug" in message:
+        elif "max" in message or "debug" in message:
             return "max"
+        elif "test" in message:
+            return "test"
         else:
             return "info"
