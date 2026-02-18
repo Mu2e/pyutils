@@ -293,6 +293,7 @@ class Processor:
 
         if len(results) == 0:
             self.logger.log(f"Results list has length zero", "warning")
+            return None
 
         if custom_worker_func is None:
             # Concatenate the arrays
