@@ -154,8 +154,8 @@ class Processor:
             return None
     
         if max_workers is None:
-            # Return a sensible default for max threads
-            max_workers = min(len(file_list), os.cpu_count()) # FIXME: sensible for threads, not processes
+            max_workers = os.cpu_count() 
+        max_workers = min(max_workers, len(file_list))
 
         ExecutorClass = ProcessPoolExecutor if use_processes else ThreadPoolExecutor
         executor_type = "processes" if use_processes else "threads"
