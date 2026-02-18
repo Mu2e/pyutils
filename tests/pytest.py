@@ -47,9 +47,9 @@ class Tester:
         # Test files
         self.local_file_path = "/exp/mu2e/data/users/mu2epro/ensembles/MDS3/MDS3a/merged_files_1/nts.mu2e.ensembleMDS3aMix1BB_CeMLeadingLog_1e-13_13629088.1_5.root"
         self.remote_file_name = "nts.mu2e.ensembleMDS2cMix1BBTriggered.MDC2020-000.001201_00000081.root"
-        self.local_file_list = "tests/MDS_local.txt"
-        self.bad_local_file_list = "tests/MDS_local_corrupted.txt"
-        self.remote_file_list = "tests/MDS_remote.txt"
+        self.local_file_list = "MDS_local.txt"
+        self.bad_local_file_list = "MDS_local_corrupted.txt"
+        self.remote_file_list = "MDS_remote.txt"
         self.defname = "nts.mu2e.ensembleMDS2cMix1BBTriggered.MDC2020-000.001201_00000081.root"
         
         # Setup logger 
