@@ -25,10 +25,11 @@ import gc
 
 # Cannot be nested (for multiprocessing)!
 class MyProcessor(Skeleton):
-    def __init__(self, file_list_path, use_processes):
+    def __init__(self, file_list_path, use_processes, max_workers=40):
         super().__init__()
-        self.file_list_path=file_list_path 
-        self.use_processes=True
+        self.file_list_path = file_list_path
+        self.use_processes = use_processes
+        self.max_workers = max_workers
     def process_file(self, file_name):
         return file_name 
             
@@ -36,9 +37,10 @@ class Tester:
     """ Tests for pyutils """
     
     def __init__(self):  
-        # Max verbosity 
-        self.verbosity = 2 
-        
+        # Max verbosity
+        self.verbosity = 2
+        self.max_workers = 40
+
         # Error tracking
         self.error_count = 0
         self.test_count = 0
@@ -50,7 +52,7 @@ class Tester:
         self.local_file_list = "MDS_local.txt"
         self.bad_local_file_list = "MDS_local_corrupted.txt"
         self.remote_file_list = "MDS_remote.txt"
-        self.defname = "nts.mu2e.ensembleMDS2cMix1BBTriggered.MDC2020-000.001201_00000081.root"
+        self.defname = "nts.mu2e.ensembleMDS2cMix1BBTriggered.MDC2020-000.root"
         
         # Setup logger 
         self.logger = Logger(
