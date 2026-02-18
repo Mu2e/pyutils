@@ -60,7 +60,7 @@ class Reader:
             self.logger.log(f"Opened {file_path}", "success")
             return file
         except Exception as e:
-            self.logger.log(f"Exception while opening {file_path}: {e}", "warning")
+            self.logger.log(f"Exception while opening {file_path}: {e}", "error")
             raise # propagate exception up
 
     def _read_remote_file(self, file_path):
