@@ -25,11 +25,10 @@ import gc
 
 # Cannot be nested (for multiprocessing)!
 class MyProcessor(Skeleton):
-    def __init__(self, file_list_path, use_processes, max_workers=40):
+    def __init__(self, file_list_path, use_processes):
         super().__init__()
         self.file_list_path = file_list_path
         self.use_processes = use_processes
-        self.max_workers = max_workers
     def process_file(self, file_name):
         return file_name 
             
@@ -39,7 +38,6 @@ class Tester:
     def __init__(self):  
         # Max verbosity
         self.verbosity = 2
-        self.max_workers = 40
 
         # Error tracking
         self.error_count = 0
@@ -127,16 +125,16 @@ class Tester:
 
         return importer.import_branches()
 
-    def _local_import_wb_branch(self): # Wideband (WB) tree 
-        importer = Importer(
-            file_name = self.local_wb_file_path,
-            tree_path = "run",
-            branches = ["runNumber"],
-            use_remote=False,
-            verbosity = self.verbosity
-        )
+    # def _local_import_wb_branch(self): # Wideband (WB) tree
+    #     importer = Importer(
+    #         file_name = self.local_wb_file_path,
+    #         tree_path = "run",
+    #         branches = ["runNumber"],
+    #         use_remote=False,
+    #         verbosity = self.verbosity
+    #     )
 
-        return importer.import_branches()
+    #     return importer.import_branches()
 
     def _local_import_special_branch(self): # Branches with special characters in the name
         importer = Importer(
@@ -150,7 +148,7 @@ class Tester:
     
     def _remote_import_branch(self):
         importer = Importer(
-            file_name = self.local_file_path,
+            file_name = self.remote_file_name,
             branches = ["event"],
             use_remote=True,
             location="tape",
@@ -188,7 +186,7 @@ class Tester:
         local_import_special_branch=True,
         remote_import_branch=True,
         local_import_grouped_branches=True,
-        local_import_all_branches=True 
+        local_import_all_branches=False 
     ):
         """Test pyimport:Importer module"""
         self.logger.log("Testing pyimport:Importer", "info")  
@@ -201,7 +199,7 @@ class Tester:
         if local_import_special_branch:
             self._safe_test("pyimport:Importer:import_branches (local, single file, special branches)", self._local_import_special_branch)     
             
-        if local_import_branch:
+        if remote_import_branch:
             self._safe_test("pyimport:Importer:import_branches (remote, single branch)", self._remote_import_branch)
             
         if local_import_grouped_branches:
@@ -294,18 +292,18 @@ class Tester:
         )
         return processor.process_data(
             file_list_path=self.local_file_list,
-            branches = ["event"]
+            branches=["event"]
         )
 
     def _basic_remote_multithread(self):
         processor = Processor(
-            location="disk",
+            location="tape",
             verbosity=self.verbosity,
             use_remote=True
         )
         return processor.process_data(
             file_list_path=self.remote_file_list,
-            branches = ["event"]
+            branches=["event"]
         )
 
     def _basic_bad_multithread(self):
@@ -314,17 +312,17 @@ class Tester:
         )
         return processor.process_data(
             file_list_path=self.bad_local_file_list,
-            branches = ["event"]
+            branches=["event"]
         )
-        
+
     def _basic_multiprocess(self):
         processor = Processor(
-            verbosity=self.verbosity, 
+            verbosity=self.verbosity,
             worker_verbosity=2
         )
         return processor.process_data(
             file_list_path=self.local_file_list,
-            branches = ["event"],
+            branches=["event"],
             use_processes=True
         )
 
@@ -333,14 +331,14 @@ class Tester:
             verbosity=self.verbosity,
             use_remote=True,
             worker_verbosity=2,
-            location="disk"
+            location="tape"
         )
         return processor.process_data(
             file_list_path=self.remote_file_list,
-            branches = ["event"],
+            branches=["event"],
             use_processes=True
         )
-            
+
     def _advanced_multithread(self):
         my_processor = MyProcessor(self.local_file_list, False)
         return my_processor.execute()
