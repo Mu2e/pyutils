@@ -5,15 +5,11 @@ import os
 import subprocess
 from .pylogger import Logger
 
-ENV_IS_SETUP = False
-
 def setup_environment():
-    """Set up the environment variables once per process"""
-    global ENV_IS_SETUP
-    
+    """Set up the environment variables once"""
     logger = Logger(print_prefix="[pyutils]")
-    
-    if not ENV_IS_SETUP:
+
+    if not os.environ.get("PYUTILS_ENV_SETUP"):
         logger.log("Setting up...", "info")
         try:
             # Step 0: unset the X509_USER_PROXY in the current process 
@@ -54,7 +50,7 @@ def setup_environment():
                     key, value = line.split('=', 1)
                     os.environ[key] = value
             
-            ENV_IS_SETUP = True
+            os.environ["PYUTILS_ENV_SETUP"] = "1"
             logger.log("Ready", "success")
             return True
             
@@ -69,5 +65,5 @@ def setup_environment():
 
 def ensure_environment():
     """Ensure environment is set up before using mdh"""
-    if not ENV_IS_SETUP:
+    if not os.environ.get("PYUTILS_ENV_SETUP"):
         setup_environment()
