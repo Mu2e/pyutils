@@ -18,6 +18,8 @@ from pyutils.pyprint import Print                  # Array visualisation
 from pyutils.pyselect import Select                # Data selection and cut management 
 from pyutils.pyvector import Vector                # Element wise vector operations
 from pyutils.pylogger import Logger                # Printout manager
+import pyutils.pylogger as _pylogger
+_pylogger.USE_EMOJIS = True
 
 import gc
 
@@ -60,6 +62,7 @@ class Tester:
     def _safe_test(self, test_name, test_function, *args, expect_return=True, **kwargs):
         """Wrapper to safely run tests and count errors"""
         self.test_count += 1
+        result = None
         try:
             self.logger.log(f"Running test: {test_name}", "test")
             result = test_function(*args, **kwargs)            
@@ -247,16 +250,6 @@ class Tester:
             branches=["event"]
         )
 
-    def _remote_process_file(self):
-        processor = Processor(
-            use_remote=True,
-            verbosity=self.verbosity
-        )
-        return processor.process_data(
-            file_name=self.remote_file_name,
-            branches=["event"]
-        )
-
     def _remote_process_file_wrong_loc(self):
         processor = Processor(
             use_remote=True,
@@ -386,7 +379,7 @@ class Tester:
         if basic_multifile:
             self._safe_test("pyprocess:Processor:process_data (basic multithread)", self._basic_multithread)
             self._safe_test("pyprocess:Processor:process_data (basic remote multithread)", self._basic_remote_multithread)
-            # self._safe_test("pyprocess:Processor:process_data (basic bad multithread)", self._basic_bad_multithread)
+            self._safe_test("pyprocess:Processor:process_data (basic bad multithread)", self._basic_bad_multithread, expect_return=False)
             self._safe_test("pyprocess:Processor:process_data (basic multiprocess)", self._basic_multiprocess)
             self._safe_test("pyprocess:Processor:process_data (basic remote multiprocess)", self._basic_remote_multiprocess)
             # self._safe_test("pyprocess:Processor:process_data (basic remote multithread)", self._basic_remote_multiprocess)
