@@ -18,6 +18,8 @@ from pyutils.pyprint import Print                  # Array visualisation
 from pyutils.pyselect import Select                # Data selection and cut management 
 from pyutils.pyvector import Vector                # Element wise vector operations
 from pyutils.pylogger import Logger                # Printout manager
+import pyutils.pylogger as _pylogger
+_pylogger.USE_EMOJIS = True
 
 import gc
 
@@ -25,8 +27,8 @@ import gc
 class MyProcessor(Skeleton):
     def __init__(self, file_list_path, use_processes):
         super().__init__()
-        self.file_list_path=file_list_path 
-        self.use_processes=True
+        self.file_list_path = file_list_path
+        self.use_processes = use_processes
     def process_file(self, file_name):
         return file_name 
             
@@ -34,9 +36,9 @@ class Tester:
     """ Tests for pyutils """
     
     def __init__(self):  
-        # Max verbosity 
-        self.verbosity = 2 
-        
+        # Max verbosity
+        self.verbosity = 2
+
         # Error tracking
         self.error_count = 0
         self.test_count = 0
@@ -45,10 +47,10 @@ class Tester:
         # Test files
         self.local_file_path = "/exp/mu2e/data/users/mu2epro/ensembles/MDS3/MDS3a/merged_files_1/nts.mu2e.ensembleMDS3aMix1BB_CeMLeadingLog_1e-13_13629088.1_5.root"
         self.remote_file_name = "nts.mu2e.ensembleMDS2cMix1BBTriggered.MDC2020-000.001201_00000081.root"
-        self.local_file_list = "tests/MDS_local.txt"
-        self.bad_local_file_list = "tests/MDS_local_corrupted.txt"
-        self.remote_file_list = "tests/MDS_remote.txt"
-        self.defname = "nts.mu2e.ensembleMDS2cMix1BBTriggered.MDC2020-000.001201_00000081.root"
+        self.local_file_list = "MDS_local.txt"
+        self.bad_local_file_list = "MDS_local_corrupted.txt"
+        self.remote_file_list = "MDS_remote.txt"
+        self.defname = "nts.mu2e.ensembleMDS2cMix1BBTriggered.MDC2020-000.root"
         
         # Setup logger 
         self.logger = Logger(
@@ -60,6 +62,7 @@ class Tester:
     def _safe_test(self, test_name, test_function, *args, expect_return=True, **kwargs):
         """Wrapper to safely run tests and count errors"""
         self.test_count += 1
+        result = None
         try:
             self.logger.log(f"Running test: {test_name}", "test")
             result = test_function(*args, **kwargs)            
@@ -122,16 +125,16 @@ class Tester:
 
         return importer.import_branches()
 
-    def _local_import_wb_branch(self): # Wideband (WB) tree 
-        importer = Importer(
-            file_name = self.local_wb_file_path,
-            tree_path = "run",
-            branches = ["runNumber"],
-            use_remote=False,
-            verbosity = self.verbosity
-        )
+    # def _local_import_wb_branch(self): # Wideband (WB) tree
+    #     importer = Importer(
+    #         file_name = self.local_wb_file_path,
+    #         tree_path = "run",
+    #         branches = ["runNumber"],
+    #         use_remote=False,
+    #         verbosity = self.verbosity
+    #     )
 
-        return importer.import_branches()
+    #     return importer.import_branches()
 
     def _local_import_special_branch(self): # Branches with special characters in the name
         importer = Importer(
@@ -145,7 +148,7 @@ class Tester:
     
     def _remote_import_branch(self):
         importer = Importer(
-            file_name = self.local_file_path,
+            file_name = self.remote_file_name,
             branches = ["event"],
             use_remote=True,
             location="tape",
@@ -183,7 +186,7 @@ class Tester:
         local_import_special_branch=True,
         remote_import_branch=True,
         local_import_grouped_branches=True,
-        local_import_all_branches=True 
+        local_import_all_branches=False 
     ):
         """Test pyimport:Importer module"""
         self.logger.log("Testing pyimport:Importer", "info")  
@@ -196,7 +199,7 @@ class Tester:
         if local_import_special_branch:
             self._safe_test("pyimport:Importer:import_branches (local, single file, special branches)", self._local_import_special_branch)     
             
-        if local_import_branch:
+        if remote_import_branch:
             self._safe_test("pyimport:Importer:import_branches (remote, single branch)", self._remote_import_branch)
             
         if local_import_grouped_branches:
@@ -235,16 +238,6 @@ class Tester:
         return processor.process_data(
             file_name=self.local_file_path,
             branches=["crvcoincs.PEsPerLayer[4]", "crvcoincs.sidePEsPerLayer[8]"]
-        )
-
-    def _remote_process_file(self):
-        processor = Processor(
-            use_remote=True,
-            verbosity=self.verbosity
-        )
-        return processor.process_data(
-            file_name=self.remote_file_name,
-            branches=["event"]
         )
 
     def _remote_process_file(self):
@@ -299,18 +292,18 @@ class Tester:
         )
         return processor.process_data(
             file_list_path=self.local_file_list,
-            branches = ["event"]
+            branches=["event"]
         )
 
     def _basic_remote_multithread(self):
         processor = Processor(
-            location="disk",
+            location="tape",
             verbosity=self.verbosity,
             use_remote=True
         )
         return processor.process_data(
             file_list_path=self.remote_file_list,
-            branches = ["event"]
+            branches=["event"]
         )
 
     def _basic_bad_multithread(self):
@@ -319,17 +312,17 @@ class Tester:
         )
         return processor.process_data(
             file_list_path=self.bad_local_file_list,
-            branches = ["event"]
+            branches=["event"]
         )
-        
+
     def _basic_multiprocess(self):
         processor = Processor(
-            verbosity=self.verbosity, 
+            verbosity=self.verbosity,
             worker_verbosity=2
         )
         return processor.process_data(
             file_list_path=self.local_file_list,
-            branches = ["event"],
+            branches=["event"],
             use_processes=True
         )
 
@@ -338,14 +331,14 @@ class Tester:
             verbosity=self.verbosity,
             use_remote=True,
             worker_verbosity=2,
-            location="disk"
+            location="tape"
         )
         return processor.process_data(
             file_list_path=self.remote_file_list,
-            branches = ["event"],
+            branches=["event"],
             use_processes=True
         )
-            
+
     def _advanced_multithread(self):
         my_processor = MyProcessor(self.local_file_list, False)
         return my_processor.execute()
@@ -386,7 +379,7 @@ class Tester:
         if basic_multifile:
             self._safe_test("pyprocess:Processor:process_data (basic multithread)", self._basic_multithread)
             self._safe_test("pyprocess:Processor:process_data (basic remote multithread)", self._basic_remote_multithread)
-            # self._safe_test("pyprocess:Processor:process_data (basic bad multithread)", self._basic_bad_multithread)
+            self._safe_test("pyprocess:Processor:process_data (basic bad multithread)", self._basic_bad_multithread, expect_return=False)
             self._safe_test("pyprocess:Processor:process_data (basic multiprocess)", self._basic_multiprocess)
             self._safe_test("pyprocess:Processor:process_data (basic remote multiprocess)", self._basic_remote_multiprocess)
             # self._safe_test("pyprocess:Processor:process_data (basic remote multithread)", self._basic_remote_multiprocess)

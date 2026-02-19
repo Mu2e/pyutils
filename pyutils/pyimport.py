@@ -49,8 +49,9 @@ class Importer:
         Returns:
             Awkward array with imported data
         """
+        file = None
         try:
-            # Open file 
+            # Open file
             file = self.reader.read_file(self.file_name) 
             # Access the tree
             components = self.tree_path.split('/')

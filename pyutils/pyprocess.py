@@ -154,8 +154,8 @@ class Processor:
             return None
     
         if max_workers is None:
-            # Return a sensible default for max threads
-            max_workers = min(len(file_list), os.cpu_count()) # FIXME: sensible for threads, not processes
+            max_workers = os.cpu_count() 
+        max_workers = min(max_workers, len(file_list))
 
         ExecutorClass = ProcessPoolExecutor if use_processes else ThreadPoolExecutor
         executor_type = "processes" if use_processes else "threads"
@@ -195,20 +195,14 @@ class Processor:
                         if result is not None:
                             results.append(result)
                             completed_files += 1
-                        else: 
+                        else:
+                            self.logger.log(f"Worker returned None for {file_name}", "warning")
                             failed_files += 1
-                        
-                        # Extract just the base filename for cleaner output
-                        base_file_name = file_name.split('/')[-1]
                         
                     except Exception as e:
                         self.logger.log(f"Error processing {file_name}:\n{e}", "error")
-                        # Increment failed files on exception
                         failed_files += 1
-                        # Redraw progress bar
                         pbar.refresh()
-                        # Propagete
-                        raise e
 
                     finally:
                         # Always update the progress bar, regardless of success or failure
@@ -278,10 +272,13 @@ class Processor:
             worker_func = custom_worker_func
 
         # Handle the single file case
-        if file_name: 
-            result = worker_func(file_name) # Run the process
-            self.logger.log(f"Completed process on {file_name}", "success")
-            return result 
+        if file_name:
+            result = worker_func(file_name)
+            if result is not None:
+                self.logger.log(f"Completed process on {file_name}", "success")
+            else:
+                self.logger.log(f"Worker returned None for {file_name}", "warning")
+            return result
 
         # Prepare file list
         file_list = self.get_file_list(file_list_path=file_list_path, defname=defname)
@@ -296,6 +293,7 @@ class Processor:
 
         if len(results) == 0:
             self.logger.log(f"Results list has length zero", "warning")
+            return None
 
         if custom_worker_func is None:
             # Concatenate the arrays
@@ -434,38 +432,43 @@ class Skeleton:
             self.logger.log(f"Please provide exactly one of 'file_name', 'file_list_path', or defname'", "error")
             return None
             
-        # Initialise the processor
-        processor = Processor(
-            tree_path=self.tree_path,
-            use_remote=self.use_remote,
-            location=self.location,
-            schema=self.schema,
-            verbosity=self.verbosity
-        )
-        
-        # Process the data
-        results = processor.process_data(
-            file_name=self.file_name, # If it's just one file it will skip the process function
-            file_list_path=self.file_list_path,
-            defname=self.defname,
-            branches=self.branches,
-            max_workers=self.max_workers,
-            custom_worker_func=self.process_file,
-            use_processes=self.use_processes 
-        )
+        try:
+            # Initialise the processor
+            processor = Processor(
+                tree_path=self.tree_path,
+                use_remote=self.use_remote,
+                location=self.location,
+                schema=self.schema,
+                verbosity=self.verbosity
+            )
 
-        # Postprocess
-        results = self.postprocess(results)
+            # Process the data
+            results = processor.process_data(
+                file_name=self.file_name, # If it's just one file it will skip the process function
+                file_list_path=self.file_list_path,
+                defname=self.defname,
+                branches=self.branches,
+                max_workers=self.max_workers,
+                custom_worker_func=self.process_file,
+                use_processes=self.use_processes
+            )
 
-        self.logger.log(f"Analysis complete", "success")
-            
-        return results
+            # Postprocess
+            results = self.postprocess(results)
+
+            if results is not None:
+                self.logger.log(f"Analysis complete", "success")
+            else:
+                self.logger.log(f"Analysis failed", "error")
+
+            return results
+
+        except Exception as e:
+            self.logger.log(f"Analysis failed: {e}", "error")
+            raise
 
     def postprocess(self, results): 
         """Run post processing on the results list 
         Placeholder method! You can override it
         """
         return results
-
-        # Such as combination 
-        
