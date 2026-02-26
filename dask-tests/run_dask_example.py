@@ -96,12 +96,20 @@ def compare_results(a: Optional[ak.Array], b: Optional[ak.Array], show_items: in
 
 
 if __name__ == "__main__":
-    # Adjust these paths/branches for your environment
-    file_list = [
-        "/Users/sophie/pyutils-dev/nts.mu2e.ensembleMDS3aMix1BBTriggered.MDC2025-001.001430_00000552.root",
-        "/Users/sophie/pyutils-dev/nts.mu2e.ensembleMDS3aMix1BBTriggered.MDC2025-001.001430_00002561.root",
-        "/Users/sophie/pyutils-dev/nts.mu2e.ensembleMDS3aMix1BBTriggered.MDC2025-001.001430_00000974.root",
-    ]
+    # Parse file-list early since it's needed for all modes
+    import argparse
+    early_parser = argparse.ArgumentParser(add_help=False)
+    early_parser.add_argument("--file-list", type=str, required=True, help="Path to text file with list of ROOT files (one per line)")
+    early_parser.add_argument("--plot", action="store_true")
+    early_parser.add_argument("--output", type=str, default=None)
+    early_parser.add_argument("--benchmark", action="store_true")
+    early_parser.add_argument("--repeat", type=int, default=1)
+    early_parser.add_argument("--dry-run", action="store_true")
+    early_args = early_parser.parse_args()
+
+    # Read file list from file
+    with open(early_args.file_list, 'r') as f:
+        file_list = [line.strip() for line in f if line.strip()]
 
     branches = {
         "trk": [
@@ -116,13 +124,8 @@ if __name__ == "__main__":
     }
 
     # Quick pre-parse: if user only requested plotting, handle it and exit
-    import argparse
-    pre_parser = argparse.ArgumentParser(add_help=False)
-    pre_parser.add_argument("--plot", action="store_true")
-    pre_parser.add_argument("--output", type=str, default=None)
-    pre_args, _ = pre_parser.parse_known_args()
-    if pre_args.plot:
-        csv_path = pre_args.output if pre_args.output is not None else None
+    if early_args.plot:
+        csv_path = early_args.output if early_args.output is not None else None
         if csv_path is None:
             import glob
             candidates = glob.glob("benchmark_results_*.csv")
@@ -226,14 +229,7 @@ if __name__ == "__main__":
     # Benchmark mode via CLI
     import argparse
 
-    parser = argparse.ArgumentParser(description="Run Processor vs Dask example/benchmark")
-    parser.add_argument("--benchmark", action="store_true", help="Run benchmark sweep")
-    parser.add_argument("--repeat", type=int, default=1, help="Repeat each config this many times and report average")
-    parser.add_argument("--dry-run", action="store_true", help="Print benchmark plan and exit")
-    parser.add_argument("--output", type=str, default=None, help="CSV path to write benchmark results (default: timestamped file)")
-    parser.add_argument("--plot", action="store_true", help="Generate plots from existing CSV and exit")
-    args = parser.parse_args()
-
+    # Benchmark mode
     def plot_benchmarks(csv_path: str) -> None:
         try:
             import pandas as pd
@@ -323,8 +319,8 @@ if __name__ == "__main__":
             print(f"Wrote {out3}")
 
     # Handle plotting separately
-    if args.plot:
-        csv_path = args.output if args.output is not None else None
+    if early_args.plot:
+        csv_path = early_args.output if early_args.output is not None else None
         if csv_path is None:
             # try to find most recent benchmark_results_*.csv
             import glob
@@ -345,7 +341,7 @@ if __name__ == "__main__":
         # After plotting, exit
         exit(0)
 
-    if args.benchmark:
+    if early_args.benchmark:
         # Define a small grid of Dask configs to sweep
         dask_grid = [
             (1, 1),
@@ -359,7 +355,7 @@ if __name__ == "__main__":
             print(f"  Dask: n_workers={nw}, threads_per_worker={tp}")
         print(f"Processor: max_workers=1..4 (threads)")
 
-        if args.dry_run:
+        if early_args.dry_run:
             print("Dry run requested; exiting without executing benchmarks")
         else:
             # Run processor baseline (single run per worker setting)
@@ -367,7 +363,7 @@ if __name__ == "__main__":
             for mw in [1, 2, 4]:
                 print(f"Running Processor with max_workers={mw}...", flush=True)
                 times = []
-                for _ in range(args.repeat):
+                for _ in range(early_args.repeat):
                     _, t = run_processor(file_list, branches, max_workers=mw, use_processes=False)
                     times.append(t)
                 proc_results[mw] = sum(times) / len(times)
@@ -378,7 +374,7 @@ if __name__ == "__main__":
             for (nw, tp) in dask_grid:
                 print(f"Running Dask n_workers={nw}, threads_per_worker={tp}...", flush=True)
                 times = []
-                for _ in range(args.repeat):
+                for _ in range(early_args.repeat):
                     _, t = run_dask(file_list, branches, n_workers=nw, threads_per_worker=tp, processes=False, show_progress=False)
                     times.append(t)
                 avg = sum(times) / len(times)
@@ -398,7 +394,7 @@ if __name__ == "__main__":
             import csv
             from datetime import datetime
 
-            out_path = args.output
+            out_path = early_args.output
             if out_path is None:
                 stamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
                 out_path = f"benchmark_results_{stamp}.csv"
@@ -415,7 +411,7 @@ if __name__ == "__main__":
                         "threads_per_worker": "",
                         "max_workers": k,
                         "avg_time_s": f"{v:.6f}",
-                        "repeat_count": args.repeat,
+                        "repeat_count": early_args.repeat,
                     })
                 # Dask rows
                 for k, v in dask_results.items():
@@ -425,6 +421,6 @@ if __name__ == "__main__":
                         "threads_per_worker": k[1],
                         "max_workers": "",
                         "avg_time_s": f"{v:.6f}",
-                        "repeat_count": args.repeat,
+                        "repeat_count": early_args.repeat,
                     })
 
