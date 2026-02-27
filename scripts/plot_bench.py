@@ -274,8 +274,8 @@ def plot_perfile_timeline(perfile_csv, out_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--summary", type=str, default="benchmark_results.csv", help="Summary CSV (from benchmark script)")
-    parser.add_argument("--out-dir", type=str, default="benchmark_out", help="Directory containing per-file CSVs and where plots will be written")
+    parser.add_argument("--summary", type=str, default="bench_out/pyprocess/benchmark_results.csv", help="Summary CSV (from benchmark script)")
+    parser.add_argument("--out-dir", type=str, default="bench_out/pyprocess", help="Directory containing per-file CSVs and where plots will be written")
     parser.add_argument("--plots-dir", type=str, default=None, help="Directory to write plots (defaults to <out-dir>/plots)")
     parser.add_argument("--perfile", type=str, default=None, help="Optional explicit per-file CSV to plot")
     args = parser.parse_args()

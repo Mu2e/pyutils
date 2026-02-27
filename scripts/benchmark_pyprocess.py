@@ -12,6 +12,8 @@ Features:
 Usage examples:
   python3 scripts/benchmark_pyprocess.py --file-list files.txt --out results.csv
 
+  python3 scripts/benchmark_pyprocess.py --file-list MDS3a_nosig.txt --location tape --use-remote --out bench_summary.csv --out-dir bench_out
+
 Note: This script uses the `Processor` and `_worker_func` from the `pyutils` package
 so run it from the repository root where `pyutils` is importable.
 """
@@ -168,8 +170,8 @@ def main():
     group.add_argument("--file-list", dest="file_list", help="Path to a newline-separated local file list")
     group.add_argument("--defname", dest="defname", help="SAM definition name (defname)")
     parser.add_argument("--reduced-branches", dest="reduced_branches", help="Comma-separated reduced branch list (e.g. Edep,track)", default=None)
-    parser.add_argument("--out", dest="out", help="Summary CSV output path", default="benchmark_results.csv")
-    parser.add_argument("--out-dir", dest="out_dir", help="Directory to store per-run outputs", default="benchmark_out")
+    parser.add_argument("--out", dest="out", help="Summary CSV output path", default="bench_out/pyprocess/benchmark_results.csv")
+    parser.add_argument("--out-dir", dest="out_dir", help="Directory to store per-run outputs", default="bench_out/pyprocess")
     parser.add_argument("--max-workers-list", dest="mw_list", help="Comma-separated max_workers values; default auto", default=None)
     parser.add_argument("--tree-path", dest="tree_path", default="EventNtuple/ntuple")
     parser.add_argument("--use-remote", dest="use_remote", action="store_true")

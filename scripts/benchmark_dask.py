@@ -40,9 +40,9 @@ def percentile(sorted_list, p):
     return d0 + d1
 
 
-def run_single_config(file_list, branches, n_workers, threads_per_worker, processes, out_dir, verbosity=0):
+def run_single_config(file_list, branches, n_workers, threads_per_worker, processes, out_dir, location="local", use_remote=True, verbosity=0):
     """Run a single dask configuration and record timing."""
-    pfx = f"nw={n_workers}_tpw={threads_per_worker}_proc={processes}_branches={'reduced' if branches else 'full'}"
+    pfx = f"nw={n_workers}_tpw={threads_per_worker}_proc={processes}_loc={location}_remote={use_remote}_branches={'reduced' if branches else 'full'}"
     out_prefix = os.path.join(out_dir, pfx)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -54,6 +54,8 @@ def run_single_config(file_list, branches, n_workers, threads_per_worker, proces
         n_workers=n_workers,
         threads_per_worker=threads_per_worker,
         processes=processes,
+        use_remote=use_remote,
+        location=location,
         show_progress=False,
     )
     t1 = time.perf_counter()
@@ -83,6 +85,8 @@ def run_single_config(file_list, branches, n_workers, threads_per_worker, proces
         "n_workers": n_workers,
         "threads_per_worker": threads_per_worker,
         "processes": processes,
+        "location": location,
+        "use_remote": use_remote,
         "branches_mode": "reduced" if branches else "full",
         "files_processed": files_processed,
         "total_time": total_time,
@@ -118,13 +122,13 @@ def main():
         "--out",
         dest="out",
         help="Summary CSV output path",
-        default="benchmark_dask_results.csv",
+        default="bench_out/dask/benchmark_dask_results.csv",
     )
     parser.add_argument(
         "--out-dir",
         dest="out_dir",
         help="Directory to store per-run outputs",
-        default="benchmark_out",
+        default="bench_out/dask",
     )
     parser.add_argument(
         "--n-workers-list",
@@ -137,6 +141,24 @@ def main():
         dest="tpw_list",
         help="Comma-separated threads_per_worker values; default: 1",
         default=None,
+    )
+    parser.add_argument(
+        "--location",
+        dest="location",
+        help="Location/source for files (e.g., tape, cache, local)",
+        default="local",
+    )
+    parser.add_argument(
+        "--location-list",
+        dest="location_list",
+        help="Comma-separated list of locations to sweep (overrides --location)",
+        default=None,
+    )
+    parser.add_argument(
+        "--use-remote",
+        dest="use_remote",
+        action="store_true",
+        help="Enable remote file access",
     )
     parser.add_argument(
         "--verbosity",
@@ -185,31 +207,39 @@ def main():
             ]
         }
 
+    # Prepare location sweep
+    if args.location_list:
+        locations = [l.strip() for l in args.location_list.split(",") if l.strip()]
+    else:
+        locations = [args.location]
+
     # Build sweep combinations
     branch_options = [reduced_branches]
 
     combos = []
-    for processes in (False, True):
-        for branches in branch_options:
-            for nw in nw_values:
-                for tpw in tpw_values:
-                    # Skip unreasonable combinations
-                    total_cores = nw * tpw
-                    if total_cores > 2 * cpu_cnt:
-                        continue
-                    combos.append((nw, tpw, processes, branches))
+    for location in locations:
+        for processes in (False, True):
+            for branches in branch_options:
+                for nw in nw_values:
+                    for tpw in tpw_values:
+                        # Skip unreasonable combinations
+                        total_cores = nw * tpw
+                        if total_cores > 2 * cpu_cnt:
+                            continue
+                        combos.append((nw, tpw, processes, branches, location))
 
     print(f"Will run {len(combos)} configurations")
     print(f"CPU count: {cpu_cnt}")
     print(f"n_workers values: {nw_values}")
     print(f"threads_per_worker values: {tpw_values}")
     print(f"processes options: False, True")
+    print(f"locations: {locations}")
     print()
 
     # Run combos and collect summaries
     summaries = []
-    for i, (nw, tpw, processes, branches) in enumerate(combos, 1):
-        config_str = f"nw={nw}, tpw={tpw}, proc={processes}, branches={'reduced' if branches else 'full'}"
+    for i, (nw, tpw, processes, branches, location) in enumerate(combos, 1):
+        config_str = f"nw={nw}, tpw={tpw}, proc={processes}, loc={location}, remote={args.use_remote}, branches={'reduced' if branches else 'full'}"
         print(f"[{i}/{len(combos)}] Running: {config_str}")
         try:
             s = run_single_config(
@@ -218,6 +248,8 @@ def main():
                 n_workers=nw,
                 threads_per_worker=tpw,
                 processes=processes,
+                location=location,
+                use_remote=args.use_remote,
                 out_dir=args.out_dir,
                 verbosity=args.verbosity,
             )
