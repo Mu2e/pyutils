@@ -17,14 +17,11 @@ This is a lightweight adapter intended to be a drop-in alternative to
 from __future__ import annotations
 
 from typing import List, Optional, Dict, Tuple
-import logging
 import awkward as ak
 from dask import delayed
 from dask.distributed import Client, progress
 
 from .pyprocess import _worker_func, Processor
-
-LOGGER = logging.getLogger("pyutils.pydask")
 
 
 class DaskProcessor:
@@ -139,11 +136,11 @@ class DaskProcessor:
         try:
             if scheduler_address:
                 client = Client(scheduler_address)
-                LOGGER.info(f"Connected to Dask scheduler at {scheduler_address}")
+                self._base.logger.log(f"Connected to Dask scheduler at {scheduler_address}", "info")
             else:
                 client = Client(n_workers=n_workers, threads_per_worker=threads_per_worker, processes=processes)
                 created_client = True
-                LOGGER.info(f"Started local Dask client: {client}")
+                self._base.logger.log(f"Started local Dask client: {client}", "info")
 
             # Create delayed tasks
             tasks = [delayed(worker_func)(fname) for fname in file_list]
