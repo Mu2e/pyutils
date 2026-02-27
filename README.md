@@ -41,6 +41,7 @@ The suite consists of the following modules.
 ```python
 pyread      # Data reading 
 pyprocess   # Listing and parallelisation 
+pydask      # Dask-based distributed processing
 pyimport    # TTree (EventNtuple) importing interface 
 pyplot      # Plotting and visualisation 
 pyprint     # Array visualisation 
@@ -78,6 +79,50 @@ ssh -KXY -L 08888:localhost:08888 <user>@mu2egpvm0<machine>.fnal.gov
 replacing the port (8888) with your chosen number and the user with your username and mu2e machine ID with that on which you launched jupyter-lab.
 
 To connect to the notebook copy the URL with the unique token printed in the terminal of the mu2e machine into your local browser.
+
+### 2.1a Parallel Processing: `pyprocess` vs `pydask`
+
+`pyutils` currently provides two parallel processing options:
+
+**`pyprocess`** (ThreadPoolExecutor/ProcessPoolExecutor):
+- Uses Python's built-in `concurrent.futures` for parallelisation
+- Best for: Small to medium datasets, local processing on single machine
+- Simpler to use, less overhead
+- Limited to resources available on your machine
+
+**`pydask`** (Dask-based):
+- Uses Dask distributed computing framework
+- Best for: Large datasets, leveraging clusters, EAF integration
+- Supports both local and remote Dask schedulers
+- Better for scaling to many workers across multiple machines
+
+#### Using `pydask` Locally
+
+```python
+from pyutils.pydask import DaskProcessor
+
+# Create processor
+dp = DaskProcessor(
+    tree_path="EventNtuple/ntuple",
+    use_remote=True,
+    location="disk"
+)
+
+# Process data - automatically creates local Dask cluster
+data = dp.process_data(
+    file_list_path="files.txt",
+    branches=["trksegs"],
+    n_workers=4,
+    threads_per_worker=1,
+    processes=True  # Use processes instead of threads
+)
+```
+
+This creates a temporary local Dask cluster with 4 workers, processes the files, then shuts down.
+
+#### Using `pydask` on EAF with Remote Scheduler
+
+We are in conversations with EAF team. We are currently not able to use a remote, centralized scheduler. Contact Sophie or Sam for more information on the progress of these conversations.
 
 ### 2.2 Module documentation 
 
