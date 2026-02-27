@@ -41,7 +41,7 @@ The suite consists of the following modules.
 ```python
 pyread      # Data reading 
 pyprocess   # Listing and parallelisation 
-pydask      # Dask-based distributed processing
+pydask      # Dask-based distributed processing (inherits from pyprocess.py)
 pyimport    # TTree (EventNtuple) importing interface 
 pyplot      # Plotting and visualisation 
 pyprint     # Array visualisation 
