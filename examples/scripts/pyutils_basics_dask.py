@@ -63,211 +63,200 @@ branches = ["trksegs"]
 logger.log("Branches to extract: " + str(branches), "info")
 
 # For demonstration, show the API for multi-file processing
-logger.log("\nMulti-File Processing Example:", "info")
+logger.log("\nDaskProcessor with SAM Definition:", "info")
 logger.log("""
-To process multiple files, use a file list with DaskProcessor:
+DaskProcessor can retrieve files from SAM definitions for parallel processing:
 
-1. Prepare a file list (one file path per line):
-   The repository includes MDS3a.txt with persistent dataset files
+- SAM definition: "nts.mu2e.ensembleMDS3aMix1BBTriggered.MDC2025-001.root"
+- Queries files dynamically from the data catalog
+- DaskProcessor creates a local cluster to process files in parallel
 
-2. Process with DaskProcessor:
-
-   processor = DaskProcessor(
-       tree_path="EventNtuple/ntuple",
-       use_remote=True,       # Access remote persistent datasets
-       location="disk"        # Read from disk storage
-   )
-   
-   data = processor.process_data(
-       file_list_path="MDS3a.txt",
-       branches=branches,
-       n_workers=4,           # Use 4 parallel workers
-       show_progress=True     # Show progress bar
-   )
-
-Advantages over Processor:
+Advantages:
+- Works with SAM definitions for dynamic file queries
+- Can also use file_list_path for static file lists
 - Scales across multiple cores automatically
-- Easy to add more files without code changes
 - Built-in progress monitoring
-- Can connect to remote Dask clusters
+- Can connect to remote Dask clusters on EAF
 """, "info")
 
-# Create a sample file list for demonstration
-logger.log("\nCreating sample file list for demonstration...", "info")
-
-# Use the MDS3a.txt file list provided in the repository
-import os
-script_dir = os.path.dirname(os.path.abspath(__file__))
-file_list_path = os.path.join(script_dir, "../../MDS3a.txt")
-
-# Verify file exists
-if os.path.exists(file_list_path):
-    with open(file_list_path, 'r') as f:
-        sample_files = [line.strip() for line in f if line.strip()]
-    
-    logger.log(f"Loaded file list from: {file_list_path}", "success")
-    logger.log(f"Total files in list: {len(sample_files)}", "info")
-    logger.log(f"First file: {sample_files[0][-80:]}", "info")
-else:
-    logger.log(f"File list not found at: {file_list_path}", "warning")
-    logger.log("Using empty file list for demo", "info")
-    sample_files = []
-    file_list_path = None
-
 # ============================================================================
-# 3. Processing Single File (Demo)
+# 3. Processing Multiple Files with SAM Definition
 # ============================================================================
 
 logger.log("\n" + "=" * 70, "info")
-logger.log("Step 2: Processing Multiple Files with DaskProcessor", "info")
+logger.log("Step 2: Retrieving File List with get_file_list()", "info")
 logger.log("=" * 70, "info")
 
-logger.log(f"Processing {len(sample_files)} files from MDS3a.txt with DaskProcessor...", "info")
+# Use get_file_list() to retrieve files from SAM definition
+logger.log("Retrieving file list from SAM definition...", "info")
 
-try:
-    # Use DaskProcessor to load and process multiple files in parallel
-    if sample_files and file_list_path:
-        logger.log("Using DaskProcessor with multi-file processing", "info")
-        
+file_list = processor.get_file_list(
+    defname="nts.mu2e.ensembleMDS3aMix1BBTriggered.MDC2025-001.root"
+)
+
+if file_list and len(file_list) > 0:
+    logger.log(f"Retrieved {len(file_list)} files from SAM definition", "success")
+    logger.log(f"First file: {file_list[0][-80:]}", "info")
+    
+    # Save to temporary file for use with process_data
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as tmp:
+        for f in file_list:
+            tmp.write(f + '\n')
+        temp_file_list = tmp.name
+    
+    logger.log(f"Saved file list to temporary file: {temp_file_list}", "info")
+    
+    # ====================================================================
+    # 4. Processing Multiple Files with DaskProcessor
+    # ====================================================================
+    
+    logger.log("\n" + "=" * 70, "info")
+    logger.log("Step 3: Processing Multiple Files with DaskProcessor", "info")
+    logger.log("=" * 70, "info")
+    
+    logger.log("Starting parallel processing with DaskProcessor...", "info")
+    
+    try:
         data = processor.process_data(
-            file_list_path=file_list_path,
+            file_list_path=temp_file_list,
             branches=branches,
             n_workers=4,              # Use 4 parallel workers
             show_progress=True        # Show progress bar
         )
-    
-    else:
-        logger.log("File list not available, cannot process multiple files", "warning")
-        logger.log("Skipping analysis", "info")
-        raise Exception("MDS3a.txt file list required for this example")
-    
-    logger.log("Data aggregation complete", "success")
-    logger.log(f"Total events from all files: {len(data)}", "info")
-    
-    # ========================================================================
-    # 4. Applying Selection Cuts
-    # ========================================================================
-    
-    logger.log("\n" + "=" * 70, "info")
-    logger.log("Step 3: Applying Selection Cuts", "info")
-    logger.log("=" * 70, "info")
-    
-    selector = Select(verbosity=1)
-    
-    logger.log("Selecting track segments at tracker entrance (TT_Front)...", "info")
-    
-    # Create a mask to select track segments at the tracker entrance
-    at_trkent = selector.select_surface(
-        data=data,
-        surface_name="TT_Front"  # Tracker entrance
-    )
-    
-    # Add the mask to the data array
-    data["at_trkent"] = at_trkent
-    
-    # Apply the mask
-    trkent = data[at_trkent]
-    
-    logger.log(f"Selected {len(trkent)} events at tracker entrance", "success")
-    
-    # ========================================================================
-    # 5. Inspecting Your Data
-    # ========================================================================
-    
-    logger.log("\n" + "=" * 70, "info")
-    logger.log("Step 4: Inspecting Data", "info")
-    logger.log("=" * 70, "info")
-    
-    printer = Print(verbose=False)
-    
-    logger.log("Data structure at tracker entrance:", "info")
-    printer.print_n_events(trkent, n_events=1)
-    
-    # ========================================================================
-    # 6. Performing Vector Operations
-    # ========================================================================
-    
-    logger.log("\n" + "=" * 70, "info")
-    logger.log("Step 5: Performing Vector Operations", "info")
-    logger.log("=" * 70, "info")
-    
-    vector = Vector(verbosity=1)
-    
-    logger.log("Computing momentum magnitude...", "info")
-    
-    mom_mag = vector.get_mag(
-        branch=trkent["trksegs"],
-        vector_name="mom"
-    )
-    
-    logger.log("Momentum magnitude computed", "success")
-    
-    # ========================================================================
-    # 7. Creating Plots
-    # ========================================================================
-    
-    logger.log("\n" + "=" * 70, "info")
-    logger.log("Step 6: Creating Plots", "info")
-    logger.log("=" * 70, "info")
-    
-    plotter = Plot()
-    
-    # Flatten arrays for plotting
-    time_flat = ak.flatten(trkent["trksegs"]["time"], axis=None)
-    mom_mag_flat = ak.flatten(mom_mag, axis=None)
-    
-    logger.log(f"Time values to plot: {len(time_flat)}", "info")
-    logger.log(f"Momentum values to plot: {len(mom_mag_flat)}", "info")
-    
-    # 1D Histogram: Time distribution
-    logger.log("Creating 1D histogram of time distribution...", "info")
-    
-    plotter.plot_1D(
-        time_flat,
-        nbins=100,
-        xmin=450,
-        xmax=1695,
-        title="Time at Tracker Entrance (Dask Example)",
-        xlabel="Fit time at Trk Ent [ns]",
-        ylabel="Events per bin",
-        out_path='h1_time_dask.png',
-        stat_box=True,
-        error_bars=True
-    )
-    
-    logger.log("1D histogram created: h1_time_dask.png", "success")
-    
-    # 2D Histogram: Momentum vs. Time
-    logger.log("Creating 2D histogram of momentum vs. time...", "info")
-    
-    plotter.plot_2D(
-        x=mom_mag_flat,
-        y=time_flat,
-        nbins_x=100,
-        xmin=85,
-        xmax=115,
-        nbins_y=100,
-        ymin=450,
-        ymax=1650,
-        title="Momentum vs. Time at Tracker Entrance (Dask Example)",
-        xlabel="Fit mom at Trk Ent [MeV/c]",
-        ylabel="Fit time at Trk Ent [ns]",
-        out_path='h2_timevmom_dask.png'
-    )
-    
-    logger.log("2D histogram created: h2_timevmom_dask.png", "success")
-    
-    # ========================================================================
-    # Summary
-    # ========================================================================
-    
-    logger.log("\n" + "=" * 70, "info")
-    logger.log("SUMMARY", "info")
-    logger.log("=" * 70, "info")
-    
-    summary = f"""
+        
+        logger.log("Data aggregation complete", "success")
+        logger.log(f"Total events from all files: {len(data)}", "info")
+        
+        # Clean up temp file
+        import os
+        os.unlink(temp_file_list)
+        logger.log("Cleaned up temporary file", "info")
+        
+        # ====================================================================
+        # 5. Applying Selection Cuts
+        # ====================================================================
+        
+        logger.log("\n" + "=" * 70, "info")
+        logger.log("Step 4: Applying Selection Cuts", "info")
+        logger.log("=" * 70, "info")
+        
+        selector = Select(verbosity=1)
+        
+        logger.log("Selecting track segments at tracker entrance (TT_Front)...", "info")
+        
+        # Create a mask to select track segments at the tracker entrance
+        at_trkent = selector.select_surface(
+            data=data,
+            surface_name="TT_Front"  # Tracker entrance
+        )
+        
+        # Add the mask to the data array
+        data["at_trkent"] = at_trkent
+        
+        # Apply the mask
+        trkent = data[at_trkent]
+        
+        logger.log(f"Selected {len(trkent)} events at tracker entrance", "success")
+        
+        # ====================================================================
+        # 6. Inspecting Your Data
+        # ====================================================================
+        
+        logger.log("\n" + "=" * 70, "info")
+        logger.log("Step 5: Inspecting Data", "info")
+        logger.log("=" * 70, "info")
+        
+        printer = Print(verbose=False)
+        
+        logger.log("Data structure at tracker entrance:", "info")
+        printer.print_n_events(trkent, n_events=1)
+        
+        # ====================================================================
+        # 7. Performing Vector Operations
+        # ====================================================================
+        
+        logger.log("\n" + "=" * 70, "info")
+        logger.log("Step 6: Performing Vector Operations", "info")
+        logger.log("=" * 70, "info")
+        
+        vector = Vector(verbosity=1)
+        
+        logger.log("Computing momentum magnitude...", "info")
+        
+        mom_mag = vector.get_mag(
+            branch=trkent["trksegs"],
+            vector_name="mom"
+        )
+        
+        logger.log("Momentum magnitude computed", "success")
+        
+        # ====================================================================
+        # 8. Creating Plots
+        # ====================================================================
+        
+        logger.log("\n" + "=" * 70, "info")
+        logger.log("Step 7: Creating Plots", "info")
+        logger.log("=" * 70, "info")
+        
+        plotter = Plot()
+        
+        # Flatten arrays for plotting
+        time_flat = ak.flatten(trkent["trksegs"]["time"], axis=None)
+        mom_mag_flat = ak.flatten(mom_mag, axis=None)
+        
+        logger.log(f"Time values to plot: {len(time_flat)}", "info")
+        logger.log(f"Momentum values to plot: {len(mom_mag_flat)}", "info")
+        
+        # 1D Histogram: Time distribution
+        logger.log("Creating 1D histogram of time distribution...", "info")
+        
+        plotter.plot_1D(
+            time_flat,
+            nbins=100,
+            xmin=450,
+            xmax=1695,
+            title="Time at Tracker Entrance (Dask Example)",
+            xlabel="Fit time at Trk Ent [ns]",
+            ylabel="Events per bin",
+            out_path='h1_time_dask.png',
+            stat_box=True,
+            error_bars=True
+        )
+        
+        logger.log("1D histogram created: h1_time_dask.png", "success")
+        
+        # 2D Histogram: Momentum vs. Time
+        logger.log("Creating 2D histogram of momentum vs. time...", "info")
+        
+        plotter.plot_2D(
+            x=mom_mag_flat,
+            y=time_flat,
+            nbins_x=100,
+            xmin=85,
+            xmax=115,
+            nbins_y=100,
+            ymin=450,
+            ymax=1650,
+            title="Momentum vs. Time at Tracker Entrance (Dask Example)",
+            xlabel="Fit mom at Trk Ent [MeV/c]",
+            ylabel="Fit time at Trk Ent [ns]",
+            out_path='h2_timevmom_dask.png'
+        )
+        
+        logger.log("2D histogram created: h2_timevmom_dask.png", "success")
+        
+        # ====================================================================
+        # Summary
+        # ====================================================================
+        
+        logger.log("\n" + "=" * 70, "info")
+        logger.log("SUMMARY", "info")
+        logger.log("=" * 70, "info")
+        
+        summary = f"""
 Multi-File Processing with DaskProcessor:
-    - Total files processed: {len(sample_files)}
+    - Total files processed: {len(file_list)}
     - Total events aggregated: {len(data)}
     - Events at tracker entrance: {len(trkent)}
     - Momentum range: {ak.min(mom_mag_flat):.2f} - {ak.max(mom_mag_flat):.2f} MeV/c
@@ -285,16 +274,13 @@ Key advantages of DaskProcessor:
 ✓ Same output format as standard Processor
 ✓ Built-in error resilience with retries
 """
-    logger.log(summary, "info")
-    
-except FileNotFoundError:
-    logger.log("Sample data file not found. The script demonstrates the API.", "warning")
-    logger.log("\nTo run with real data:", "info")
-    logger.log("1. Edit the sample_files list with actual file paths", "info")
-    logger.log("2. Set appropriate file_list_path for multiple files", "info")
-    logger.log("3. Run: processor.process_data(file_list_path=..., branches=...)", "info")
-except Exception as e:
-    logger.log(f"Error during processing: {e}", "error")
-    logger.log("Check that Mu2e environment is properly initialized", "warning")
+        logger.log(summary, "info")
+        
+    except FileNotFoundError:
+        logger.log("SAM definition files not found.", "error")
+        raise
+    except Exception as e:
+        logger.log(f"Error during processing: {e}", "error")
+        raise
 
 logger.log("\nScript completed!", "success")
