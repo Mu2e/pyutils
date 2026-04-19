@@ -8,15 +8,88 @@ Classes:
 """
 
 import numpy as np
+import pandas as pd
 import awkward as ak
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 import os
+import traceback
+from typing import List, Tuple, Optional, Dict
 
 from .pylogger import Logger
-from .pycrystal import PipeGeometry
+
+
+class PipeGeometry:
+    """
+    Represents the calibration pipe geometry from CaloCalibGun.
+    
+    Encapsulates pipe geometry parameters and calculations from the mu2e
+    calorimeter calibration gun system, directly matching CaloCalibGun_module.cc.
+    
+    Configuration from calorimeter_CsI_v2.txt:
+    - nPipes = 5
+    - pipeTorRadius = {397, 457, 517, 577, 637} mm
+    - pipeRadius = 4.75 mm (cross-sectional radius, not used for centerline visualization)
+    - radSmTor = 41.0 mm (small torus radius)
+    - xsmall = 71.0 mm
+    - xdistance = 60.0 mm
+    - rInnerManifold = 681.6 mm
+    """
+    
+    def __init__(
+        self,
+        pipe_tor_radii: List[float] = None,
+        large_tor_phi: List[float] = None,
+        small_tor_phi: List[float] = None,
+        phi_end: List[float] = None,
+        ysmall: List[float] = None,
+        rad_smtor: float = 41.0,
+        xsmall: float = 71.0,
+        xdistance: float = 60.0,
+        rinner_manifold: float = 681.6,
+        pipe_radius: float = 4.75,
+        pipe_thickness: float = 0.5,
+        pipe_init_separation: float = 25.4,
+    ):
+        """
+        Initialize pipe geometry parameters from calorimeter config.
+        
+        All parameters match calorimeter_CsI_v2.txt exactly.
+        """
+        self.pipe_tor_radii = pipe_tor_radii or [397.0, 457.0, 517.0, 577.0, 637.0]
+        self.pipe_radius = pipe_radius
+        self.pipe_thickness = pipe_thickness
+        self.pipe_init_separation = pipe_init_separation
+        self.large_tor_phi = large_tor_phi or [161.34, 149.50, 139.50, 132.07, 125.39]
+        self.small_tor_phi = small_tor_phi or [84.63, 85.28, 85.79, 86.20, 86.53]
+        self.phi_end = phi_end or [3.96, 10.53, 15.80, 20.16, 23.84]
+        self.ysmall = ysmall or [432.2, 480.5, 524.3, 564.7, 602.5]
+        self.rad_smtor = rad_smtor
+        self.xsmall = xsmall
+        self.xdistance = xdistance
+        self.rinner_manifold = rinner_manifold
+        self.yposition = self.ysmall
+    
+    def calculate_pipe_centers(self) -> List[Tuple[float, float]]:
+        """
+        Calculate the center positions (x, y) of each pipe.
+        
+        Based on CaloCalibGun geometry, returns centers in mm.
+        """
+        centers = []
+        n_pipes = len(self.pipe_tor_radii)
+        
+        for idx in range(n_pipes):
+            # Approximate center position of each pipe
+            # Using large torus radius as primary center location
+            x_center = self.pipe_tor_radii[idx] * np.cos(np.radians(self.large_tor_phi[idx] / 2.0))
+            y_center = self.ysmall[idx]
+            
+            centers.append((x_center, y_center))
+        
+        return centers
 
 
 class CaloAnalysis:
@@ -174,128 +247,6 @@ class CaloAnalysis:
             self.logger.log(f"Error finding matching reco: {e}", "error")
             return []
     
-    def compare_reco_vs_mc_energy(self, reco, mc, reco_caloDigiIdx, calo_sipmid):
-        """
-        Compare reconstructed vs MC energy on a per-crystal basis within each event.
-        
-        For each event, within each crystal (SiPMID), aggregates total reco and MC energy.
-        Results are organized by event - no global flattening across events/crystals.
-        
-        Args:
-            reco (ak.Array or list): Reconstructed digi energies (calorecodigis.eDep_)
-            mc (ak.Array or list): MC truth energies (calodigismc.eDep)
-            reco_caloDigiIdx (ak.Array or list): Indices mapping reco -> calo digis (calorecodigis.caloDigiIdx_)
-            calo_sipmid (ak.Array or list): SiPM IDs identifying crystals (calodigis.SiPMID_)
-        
-        Returns:
-            dict: Per-event, per-crystal aggregated energies:
-                - by_event: dict {evt_idx: {sipmid: {'reco': total_reco, 'mc': total_mc, 'residual': residual}}}
-                - n_crystals_per_evt: list of hit crystal counts per event
-                - n_events: total number of events
-        
-        Example:
-            # Extract required arrays
-            reco_edeps = calo_data["calorecodigis.eDep_"]
-            mc_edeps = calo_data["calodigismc.eDep"]
-            reco_idx = calo_data["calorecodigis.caloDigiIdx_"]
-            sipmids = calo_data["calodigis.SiPMID_"]
-            
-            # Compare per crystal within each event
-            comparison = calo_ana.compare_reco_vs_mc_energy(reco_edeps, mc_edeps, reco_idx, sipmids)
-            
-            # Access results per event
-            for evt_idx, crystals_dict in comparison['by_event'].items():
-                for sipmid, energies in crystals_dict.items():
-                    print(f"Event {evt_idx}, Crystal {sipmid}: " +
-                          f"reco={energies['reco']:.2f}, mc={energies['mc']:.2f}, " +
-                          f"residual={energies['residual']:.2f}")
-        """
-        try:
-            if reco is None or mc is None or reco_caloDigiIdx is None or calo_sipmid is None:
-                self.logger.log("Missing required energy or mapping arrays", "warn")
-                return None
-            
-            by_event = {}
-            n_crystals_per_evt = []
-            
-            n_events = len(reco)
-            
-            for evt_idx in range(n_events):
-                try:
-                    # Extract event data
-                    reco_evt = ak.to_list(reco[evt_idx])
-                    mc_evt = ak.to_list(mc[evt_idx])
-                    reco_idx_evt = ak.to_list(reco_caloDigiIdx[evt_idx])
-                    sipmid_evt = ak.to_list(calo_sipmid[evt_idx])
-                    
-                    # Handle nested lists
-                    if reco_evt and isinstance(reco_evt[0], list):
-                        reco_evt = [e for sublist in reco_evt for e in (sublist if isinstance(sublist, list) else [sublist])]
-                    if mc_evt and isinstance(mc_evt[0], list):
-                        mc_evt = [e for sublist in mc_evt for e in (sublist if isinstance(sublist, list) else [sublist])]
-                    if reco_idx_evt and isinstance(reco_idx_evt[0], list):
-                        reco_idx_evt = [e for sublist in reco_idx_evt for e in (sublist if isinstance(sublist, list) else [sublist])]
-                    if sipmid_evt and isinstance(sipmid_evt[0], list):
-                        sipmid_evt = [e for sublist in sipmid_evt for e in (sublist if isinstance(sublist, list) else [sublist])]
-                    
-                    # Group energies by crystal within this event
-                    crystal_energies = {}  # sipmid -> {'reco': sum, 'mc': sum}
-                    
-                    # First, map calodigis to their SiPM IDs
-                    calo_sipmid_map = {}  # calo_idx -> sipmid
-                    for calo_idx, sipmid in enumerate(sipmid_evt):
-                        calo_sipmid_map[calo_idx] = int(sipmid)
-                    
-                    # Aggregate energies by crystal
-                    for reco_idx, calo_idx_ref in enumerate(reco_idx_evt):
-                        try:
-                            calo_idx = int(calo_idx_ref)
-                            if calo_idx in calo_sipmid_map:
-                                sipmid = calo_sipmid_map[calo_idx]
-                                reco_energy = float(reco_evt[reco_idx]) if reco_idx < len(reco_evt) else 0
-                                mc_energy = float(mc_evt[calo_idx]) if calo_idx < len(mc_evt) else 0
-                                
-                                if sipmid not in crystal_energies:
-                                    crystal_energies[sipmid] = {'reco': 0, 'mc': 0}
-                                
-                                crystal_energies[sipmid]['reco'] += reco_energy
-                                crystal_energies[sipmid]['mc'] += mc_energy
-                        except (ValueError, TypeError, IndexError):
-                            pass
-                    
-                    # Compute residuals for this event's crystals
-                    evt_crystals = {}
-                    for sipmid, energies in crystal_energies.items():
-                        residual = energies['mc'] - energies['reco']  # MC - reco
-                        evt_crystals[sipmid] = {
-                            'reco': energies['reco'],
-                            'mc': energies['mc'],
-                            'residual': residual
-                        }
-                    
-                    by_event[evt_idx] = evt_crystals
-                    n_crystals_per_evt.append(len(evt_crystals))
-                    
-                except Exception as e:
-                    self.logger.log(f"Error processing event {evt_idx}: {e}", "warn")
-                    by_event[evt_idx] = {}
-                    n_crystals_per_evt.append(0)
-            
-            self.logger.log(f"Compared reco vs MC energy for {n_events} events", "debug")
-            
-            return {
-                'by_event': by_event,
-                'n_crystals_per_evt': n_crystals_per_evt,
-                'n_events': n_events
-            }
-        
-        except Exception as e:
-            self.logger.log(f"Error in compare_reco_vs_mc_energy: {e}", "error")
-            import traceback
-            self.logger.log(traceback.format_exc(), "debug")
-            return None
-
-
 class CaloVisualization:
     """
     Utility class for calorimeter visualization.
@@ -314,82 +265,78 @@ class CaloVisualization:
             print_prefix="[pycalo_vis]",
             verbosity=verbosity
         )
+        # Store crystal map data when loaded
+        self.crystals_by_disk = {}
+        self.crystal_map_data = None
+        self.pipe_geometry = None
         self.logger.log("Initialised CaloVisualization", "info")
     
     def load_crystal_map(self):
         """
-        Load crystal map from caloDMAP_nominal.dat file.
+        Load crystal map from caloDMAP_nominal.dat file directly into crystals_by_disk.
         
         Returns:
-            CrystalMap object or None if loading fails
+            bool: True if loading succeeds, False otherwise
         
         Example:
-            crysmap = calo_vis.load_crystal_map()
-            if crysmap:
-                print(f"Loaded crystal map with disks")
+            calo_vis = CaloVisualization()
+            if calo_vis.load_crystal_map():
+                print(f"Loaded {len(calo_vis.crystals_by_disk)} disks")
         """
         try:
-            import sys
-            import importlib.util
-            
-            # Get path to pycrystal.py in this module directory
-            module_dir = os.path.dirname(__file__)
-            pycrystal_path = os.path.join(module_dir, 'pycrystal.py')
-            
-            if not os.path.exists(pycrystal_path):
-                self.logger.log(f"pycrystal.py not found at {pycrystal_path}", "error")
-                return None
-            
-            # Load pycrystal module with proper package context
-            try:
-                spec = importlib.util.spec_from_file_location(
-                    "pyutils.pycrystal", 
-                    pycrystal_path,
-                    submodule_search_locations=[module_dir]
-                )
-                pycrystal_module = importlib.util.module_from_spec(spec)
-                
-                # Add to sys.modules so relative imports work
-                sys.modules["pyutils.pycrystal"] = pycrystal_module
-                sys.modules["pyutils"] = type(sys)("module")  # Create minimal pyutils module
-                
-                # Now execute the module (this will resolve relative imports)
-                spec.loader.exec_module(pycrystal_module)
-                
-                CrystalMap = pycrystal_module.CrystalMap
-                self.logger.log(f"Successfully imported CrystalMap using importlib", "debug")
-            
-            except Exception as e:
-                self.logger.log(f"Failed to import CrystalMap: {e}", "error")
-                import traceback
-                self.logger.log(f"Traceback: {traceback.format_exc()}", "debug")
-                return None
-            
             # Use local caloDMAP_nominal.dat file
+            module_dir = os.path.dirname(__file__)
             map_file = os.path.join(module_dir, 'caloDMAP_nominal.dat')
             
             if not os.path.exists(map_file):
                 self.logger.log(f"caloDMAP_nominal.dat not found at {map_file}", "error")
-                self.logger.log(f"Please ensure caloDMAP_nominal.dat exists in {module_dir}", "error")
-                return None
+                return False
             
-            self.logger.log(f"Loading CrystalMap from {map_file}", "info")
+            self.logger.log(f"Loading crystal map from {map_file}", "info")
             
-            try:
-                crysmap = CrystalMap(map_file, verbosity=0)
-                self.logger.log(f"Loaded CrystalMap successfully", "success")
-                return crysmap
-            except Exception as e:
-                self.logger.log(f"CrystalMap initialization failed: {e}", "error")
-                import traceback
-                self.logger.log(f"Traceback: {traceback.format_exc()}", "debug")
-                return None
+            # Read the map file with whitespace delimiter
+            self.crystal_map_data = pd.read_csv(
+                map_file,
+                sep='\s+',
+                dtype={
+                    'y': int,
+                    'x': int,
+                    'disk': int,
+                    'xcry': float,
+                    'ycry': float,
+                    'cryID': int,
+                    'Type': str
+                }
+            )
+            
+            # Filter to only CAL (calorimeter) crystals and valid disks
+            self.crystal_map_data = self.crystal_map_data[(self.crystal_map_data['Type'] == 'CAL') & (self.crystal_map_data['disk'] >= 0)].copy()
+            
+            # Organize crystals by disk
+            for disk in sorted(self.crystal_map_data['disk'].unique()):
+                disk_data = self.crystal_map_data[self.crystal_map_data['disk'] == disk].copy()
+                self.crystals_by_disk[int(disk)] = disk_data
+            
+            self.logger.log(
+                f"Loaded {len(self.crystal_map_data)} CAL crystals from {len(self.crystals_by_disk)} disks",
+                "info"
+            )
+            
+            for disk_id, disk_crystals in self.crystals_by_disk.items():
+                self.logger.log(f"  Disk {disk_id}: {len(disk_crystals)} crystals", "info")
+            
+            # Initialize PipeGeometry if not already done
+            if self.pipe_geometry is None:
+                self.pipe_geometry = PipeGeometry()
+                self.logger.log(f"Initialized pipe geometry with {len(self.pipe_geometry.pipe_tor_radii)} pipes", "info")
+            
+            return True
         
         except Exception as e:
-            self.logger.log(f"Could not load CrystalMap: {e}", "error")
+            self.logger.log(f"Error loading crystal map: {e}", "error")
             import traceback
-            self.logger.log(f"Traceback: {traceback.format_exc()}", "debug")
-            return None
+            self.logger.log(traceback.format_exc(), "debug")
+            return False
     
     def plot_crystal_grid(self, ax, crysmap, disk=0, show_labels=False, 
                           alpha=0.7, crystal_color='lightblue', edge_color='black'):
@@ -460,119 +407,8 @@ class CaloVisualization:
             self.logger.log(f"Error plotting crystal grid: {e}", "error")
             return 0
     
-    def plot_pipes(self, ax, crysmap, disk=0, pipe_color='red', pipe_alpha=0.3, label=True):
-        """
-        Draw calibration pipes on a matplotlib axes.
-        
-        Args:
-            ax (plt.Axes): Matplotlib axes to draw on
-            crysmap (CrystalMap): Crystal map object
-            disk (int): Disk number for pipes (default: 0)
-            pipe_color (str): Color for pipe lines (default: 'red')
-            pipe_alpha (float): Transparency for pipes (default: 0.3)
-            label (bool): Whether to label pipe IDs (default: True)
-        
-        Returns:
-            int: Number of pipes drawn
-        
-        Example:
-            n_pipes = calo_vis.plot_pipes(ax, crysmap, disk=0, label=True)
-            print(f"Drew {n_pipes} pipes")
-        """
-        try:
-            if crysmap is None:
-                self.logger.log("CrystalMap is None, cannot draw pipes", "warning")
-                return 0
-            
-            # Use internal CrystalMap method if available
-            if hasattr(crysmap, '_draw_pipes'):
-                crysmap._draw_pipes(ax, pipe_color=pipe_color, pipe_alpha=pipe_alpha, 
-                                   label_pipes=label)
-                self.logger.log("Drew pipes using CrystalMap._draw_pipes", "info")
-                return 1  # Return 1 to indicate success
-            else:
-                self.logger.log("CrystalMap does not have _draw_pipes method", "warning")
-                return 0
-        
-        except Exception as e:
-            self.logger.log(f"Error plotting pipes: {e}", "error")
-            return 0
-    
-    def plot_2d_energy_heatmap(self, ax, crysmap, digi_positions, digi_energies, 
-                               disk=0, title=None, cmap='YlOrRd', show_labels=False):
-        """
-        Plot 2D energy heatmap on crystal grid.
-        
-        Colors crystals based on energy deposited, overlaying on crystal map.
-        
-        Args:
-            ax (plt.Axes): Matplotlib axes to draw on
-            crysmap (CrystalMap): Crystal map object
-            digi_positions (list): List of (x, y) positions for digis
-            digi_energies (np.ndarray): Energy values for each digi
-            disk (int): Disk number to display (default: 0)
-            title (str, optional): Plot title
-            cmap (str): Colormap name (default: 'YlOrRd')
-            show_labels (bool): Show crystal IDs (default: False)
-        
-        Returns:
-            tuple: (n_crystals_drawn, colorbar_mappable)
-        
-        Example:
-            sm = calo_vis.plot_2d_energy_heatmap(ax, crysmap, pos_list, energy_array)
-        """
-        try:
-            if crysmap is None:
-                self.logger.log("CrystalMap is None, cannot draw heatmap", "warning")
-                return 0, None
-            
-            # Draw background grid first
-            self.plot_crystal_grid(ax, crysmap, disk=disk, show_labels=show_labels, 
-                                  alpha=0.5, crystal_color='lightgray')
-            
-            # Set up color map
-            digi_energies = np.array(digi_energies, dtype=float)
-            if len(digi_energies) > 0 and np.max(digi_energies) > 0:
-                norm = Normalize(vmin=0, vmax=np.max(digi_energies))
-            else:
-                norm = Normalize(vmin=0, vmax=1)
-            
-            cmap_obj = plt.cm.get_cmap(cmap)
-            sm = ScalarMappable(norm=norm, cmap=cmap_obj)
-            
-            # Draw energy-colored crystals
-            n_drawn = 0
-            for i, (x, y) in enumerate(digi_positions):
-                if i < len(digi_energies):
-                    energy = digi_energies[i]
-                    color = cmap_obj(norm(energy))
-                    
-                    # Draw highlighted crystal
-                    highlight = patches.Rectangle(
-                        (x - 17, y - 17),
-                        34, 34,
-                        linewidth=2,
-                        edgecolor='black',
-                        facecolor=color,
-                        alpha=0.9,
-                        zorder=3
-                    )
-                    ax.add_patch(highlight)
-                    n_drawn += 1
-            
-            # Add colorbar
-            cbar = plt.colorbar(sm, ax=ax, label='Energy (MeV)', shrink=0.8)
-            
-            if title:
-                ax.set_title(title, fontsize=12)
-            
-            self.logger.log(f"Drew {n_drawn} energy-colored crystals", "info")
-            return n_drawn, sm
-        
-        except Exception as e:
-            self.logger.log(f"Error plotting energy heatmap: {e}", "error")
-            return 0, None
-    
+
+
     def highlight_hit_crystals(self, ax, crysmap, crystal_ids, disk=0, 
                                color='yellow', edge_color='orange', linewidth=2,
                                show_labels=True, fontsize=8):
@@ -651,105 +487,8 @@ class CaloVisualization:
             self.logger.log(f"Error highlighting crystals: {e}", "error")
             return 0
     
-    def annotate_crystal_info(self, ax, crysmap, crystal_ids, info_dict, disk=0, fontsize=7):
-        """
-        Add text annotations to crystals with information (energy, ID, etc).
-        
-        Args:
-            ax (plt.Axes): Matplotlib axes to draw on
-            crysmap (CrystalMap): Crystal map object
-            crystal_ids (list): List of crystal IDs to annotate
-            info_dict (dict): Map of crystal_id -> info_string
-            disk (int): Disk number (default: 0)
-            fontsize (int): Font size for annotations (default: 7)
-        
-        Returns:
-            int: Number of annotations added
-        
-        Example:
-            info = {100: "5.2MeV", 101: "3.1MeV"}
-            n_ann = calo_vis.annotate_crystal_info(ax, crysmap, [100, 101], info)
-        """
-        try:
-            if crysmap is None:
-                self.logger.log("CrystalMap is None", "warning")
-                return 0
-            
-            if disk not in crysmap.crystals_by_disk:
-                self.logger.log(f"Disk {disk} not found", "warning")
-                return 0
-            
-            disk_data = crysmap.crystals_by_disk[disk]
-            n_annotated = 0
-            
-            for _, row in disk_data.iterrows():
-                cryid = int(row['cryID'])
-                
-                if cryid in crystal_ids and cryid in info_dict:
-                    xcry = row['xcry']
-                    ycry = row['ycry']
-                    info_text = str(info_dict[cryid])
-                    
-                    # Add text annotation
-                    ax.text(xcry, ycry, info_text, fontsize=fontsize, ha='center', va='center',
-                           color='black', weight='bold', zorder=75,
-                           bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-                    n_annotated += 1
-            
-            self.logger.log(f"Added annotations to {n_annotated} crystals", "info")
-            return n_annotated
-        
-        except Exception as e:
-            self.logger.log(f"Error annotating crystals: {e}", "error")
-            return 0
-    
-    def overlay_particles_on_crystals(self, ax, particle_x, particle_y, particle_labels=None,
-                                     marker='*', size=200, color='lime', edge_color='green'):
-        """
-        Overlay simulated particle positions on crystal map.
-        
-        Args:
-            ax (plt.Axes): Matplotlib axes to draw on
-            particle_x (np.ndarray): X coordinates of particles
-            particle_y (np.ndarray): Y coordinates of particles
-            particle_labels (np.ndarray, optional): Labels for particles (PDG, ID, etc)
-            marker (str): Marker style (default: '*')
-            size (int): Marker size (default: 200)
-            color (str): Marker fill color (default: 'lime')
-            edge_color (str): Marker edge color (default: 'green')
-        
-        Returns:
-            int: Number of particles plotted
-        
-        Example:
-            n_particles = calo_vis.overlay_particles_on_crystals(ax, x_arr, y_arr, labels)
-        """
-        try:
-            particle_x = np.array(particle_x, dtype=float)
-            particle_y = np.array(particle_y, dtype=float)
-            
-            if len(particle_x) == 0 or len(particle_y) == 0:
-                self.logger.log("No particles to overlay", "warning")
-                return 0
-            
-            # Plot particles
-            ax.scatter(particle_x, particle_y, alpha=0.9, s=size, marker=marker,
-                      edgecolors=edge_color, c=color, zorder=100)
-            
-            # Add labels if provided
-            if particle_labels is not None:
-                particle_labels = np.array(particle_labels)
-                for i, (x, y) in enumerate(zip(particle_x, particle_y)):
-                    label = str(particle_labels[i]) if i < len(particle_labels) else ""
-                    ax.text(x, y, label, fontsize=8, ha='center', va='bottom', color='black')
-            
-            self.logger.log(f"Overlaid {len(particle_x)} particles", "info")
-            return len(particle_x)
-        
-        except Exception as e:
-            self.logger.log(f"Error overlaying particles: {e}", "error")
-            return 0
-    
+
+
     def set_2d_axis_limits(self, ax, crysmap, disk=0, margin=200):
         """
         Set 2D axis limits to show crystal map with margin.
@@ -791,67 +530,7 @@ class CaloVisualization:
         except Exception as e:
             self.logger.log(f"Error setting axis limits: {e}", "error")
     
-    def create_2d_event_display(self, crysmap, disk=0, digi_positions=None, digi_energies=None,
-                               particle_x=None, particle_y=None, particle_labels=None,
-                               show_pipes=False, figsize=(12, 10)):
-        """
-        Create a complete 2D event display with all overlays.
-        
-        Convenience function that combines crystal grid, digis, and particles in one plot.
-        
-        Args:
-            crysmap (CrystalMap): Crystal map object
-            disk (int): Disk number to display (default: 0)
-            digi_positions (list): List of (x, y) digi positions (optional)
-            digi_energies (np.ndarray): Energy values for digis (optional)
-            particle_x (np.ndarray): X coordinates of particles (optional)
-            particle_y (np.ndarray): Y coordinates of particles (optional)
-            particle_labels (np.ndarray): Labels for particles (optional)
-            show_pipes (bool): Whether to draw pipes (default: False)
-            figsize (tuple): Figure size (default: (12, 10))
-        
-        Returns:
-            tuple: (fig, ax)
-        
-        Example:
-            fig, ax = calo_vis.create_2d_event_display(crysmap, disk=0,
-                  digi_positions=pos, digi_energies=energy, particle_x=px, particle_y=py)
-            plt.savefig("event_display.png")
-        """
-        try:
-            fig, ax = plt.subplots(figsize=figsize)
-            
-            # Draw crystal grid
-            self.plot_crystal_grid(ax, crysmap, disk=disk, show_labels=False, alpha=0.7)
-            
-            # Draw pipes if requested
-            if show_pipes:
-                self.plot_pipes(ax, crysmap, disk=disk, pipe_color='red', pipe_alpha=0.3)
-            
-            # Draw energy heatmap if digi info provided
-            if digi_positions is not None and digi_energies is not None:
-                self.plot_2d_energy_heatmap(ax, crysmap, digi_positions, digi_energies,
-                                           disk=disk, cmap='YlOrRd')
-            
-            # Overlay particles if provided
-            if particle_x is not None and particle_y is not None:
-                self.overlay_particles_on_crystals(ax, particle_x, particle_y, 
-                                                  particle_labels=particle_labels)
-            
-            # Configure axis
-            self.set_2d_axis_limits(ax, crysmap, disk=disk, margin=200)
-            ax.set_xlabel('X (mm)', fontsize=11)
-            ax.set_ylabel('Y (mm)', fontsize=11)
-            ax.set_title(f'Disk {disk}: 2D Event Display', fontsize=13)
-            ax.grid(True, alpha=0.3)
-            
-            self.logger.log("Created 2D event display", "success")
-            return fig, ax
-        
-        except Exception as e:
-            self.logger.log(f"Error creating 2D event display: {e}", "error")
-            return None, None
-    
+
     def find_crystals_by_position(self, crysmap, positions_x, positions_y, disk=0, tolerance=17):
         """
         Find crystal IDs for given (x, y) positions on a disk.
@@ -914,192 +593,9 @@ class CaloVisualization:
             return []
     
     
-    def highlight_by_sipms(self, ax, crysmap, sipm_ids, disk=0, 
-                          color='yellow', edge_color='orange', linewidth=2):
-        """
-        Highlight crystals corresponding to a list of SiPM IDs from event data.
-        
-        Looks up SiPM IDs directly in the crystal map to find which crystals to highlight.
-        
-        Args:
-            ax (plt.Axes): Matplotlib axes to draw on
-            crysmap (CrystalMap): Crystal map object
-            sipm_ids (list or np.ndarray): List of SiPM IDs from event data
-            disk (int): Disk number (default: 0)
-            color (str): Highlight color (default: 'yellow')
-            edge_color (str): Edge color (default: 'orange')
-            linewidth (int): Edge line width (default: 2)
-        
-        Returns:
-            int: Number of crystals highlighted
-        
-        Example:
-            # Highlight digis from event's SiPM IDs
-            n_high = calo_vis.highlight_by_sipms(ax, crysmap, event_digi_sipms)
-        """
-        try:
-            if crysmap is None:
-                self.logger.log("CrystalMap is None", "warning")
-                return 0
-            
-            if disk not in crysmap.crystals_by_disk:
-                self.logger.log(f"Disk {disk} not found in crystal map", "warning")
-                return 0
-            
-            # Convert to set of integers for fast lookup
-            sipm_ids = set([int(sid) for sid in sipm_ids])
-            self.logger.log(f"Looking up {len(sipm_ids)} SiPM IDs in crystal map", "debug")
-            
-            disk_data = crysmap.crystals_by_disk[disk]
-            n_highlighted = 0
-            found_sipms = set()
-            
-            # Look for crystals with matching SiPM IDs
-            for _, row in disk_data.iterrows():
-                sipm_id = int(row.get('SiPMID', -1)) if 'SiPMID' in row else int(row.get('sipmid', -1)) if 'sipmid' in row else -1
-                
-                if sipm_id in sipm_ids:
-                    found_sipms.add(sipm_id)
-                    xcry = row['xcry']
-                    ycry = row['ycry']
-                    
-                    # Draw highlight patch
-                    highlight = patches.Rectangle(
-                        (xcry - 17, ycry - 17),
-                        34, 34,
-                        linewidth=linewidth,
-                        edgecolor=edge_color,
-                        facecolor=color,
-                        alpha=0.8,
-                        zorder=50
-                    )
-                    ax.add_patch(highlight)
-                    n_highlighted += 1
-            
-            self.logger.log(f"Found {len(found_sipms)}/{len(sipm_ids)} SiPM IDs in crystal map, drew {n_highlighted} patches", "info")
-            if len(found_sipms) < len(sipm_ids):
-                missing = sipm_ids - found_sipms
-                self.logger.log(f"Missing SiPM IDs: {sorted(list(missing))[:10]}", "debug")
-            
-            return n_highlighted
-        
-        except Exception as e:
-            self.logger.log(f"Error highlighting by SiPMs: {e}", "error")
-            return 0
-    
-    def highlight_digis(self, ax, crysmap, data, evt_idx, digi_indices, disk=0,
-                       color='yellow', edge_color='orange', linewidth=2):
-        """
-        Highlight crystals corresponding to specific calorimeter digis.
-        
-        Extracts SiPM IDs from specified digi indices and highlights their crystals.
-        
-        Args:
-            ax (plt.Axes): Matplotlib axes to draw on
-            crysmap (CrystalMap): Crystal map object
-            data (ak.Array): Data array with calo digi branches
-            evt_idx (int): Event index
-            digi_indices (list or np.ndarray): Indices of digis to highlight (relative to event)
-            disk (int): Disk number (default: 0)
-            color (str): Highlight color (default: 'yellow')
-            edge_color (str): Edge color (default: 'orange')
-            linewidth (int): Edge line width (default: 2)
-        
-        Returns:
-            int: Number of crystals highlighted
-        
-        Example:
-            # Highlight digis 0, 2, 5 in event 0
-            n_high = calo_vis.highlight_digis(ax, crysmap, data, evt_idx=0,
-                                              digi_indices=[0, 2, 5])
-        """
-        try:
-            import awkward as ak
-            
-            # Extract SiPM IDs for this event
-            sipmid = data["calo"]["calodigis.SiPMID_"]
-            sipm_list = ak.to_list(sipmid[evt_idx])
-            
-            # Handle nested lists
-            if isinstance(sipm_list, list) and len(sipm_list) > 0 and isinstance(sipm_list[0], list):
-                sipm_list = [val for sublist in sipm_list for val in (sublist if isinstance(sublist, list) else [sublist])]
-            
-            # Extract SiPMs for specified digi indices
-            digi_indices = np.array(digi_indices, dtype=int)
-            selected_sipms = [int(sipm_list[i]) for i in digi_indices if i < len(sipm_list)]
-            
-            # Highlight by SiPM
-            n_highlighted = self.highlight_by_sipms(
-                ax, crysmap, selected_sipms, disk=disk,
-                color=color, edge_color=edge_color, linewidth=linewidth
-            )
-            
-            self.logger.log(f"Highlighted {len(selected_sipms)} digis ({n_highlighted} crystals) for event {evt_idx}", "info")
-            return n_highlighted
-        except Exception as e:
-            self.logger.log(f"Error highlighting digis: {e}", "error")
-            return 0
-    
-    def highlight_reco_digis(self, ax, crysmap, data, evt_idx, reco_indices, disk=0,
-                            color='cyan', edge_color='blue', linewidth=2):
-        """
-        Highlight crystals corresponding to specific reconstructed digis.
-        
-        Maps reco digis back to calo digis via caloDigiIdx, then highlights their crystals.
-        
-        Args:
-            ax (plt.Axes): Matplotlib axes to draw on
-            crysmap (CrystalMap): Crystal map object
-            data (ak.Array): Data array with reco and calo digi branches
-            evt_idx (int): Event index
-            reco_indices (list or np.ndarray): Indices of reco digis to highlight
-            disk (int): Disk number (default: 0)
-            color (str): Highlight color (default: 'cyan')
-            edge_color (str): Edge color (default: 'blue')
-            linewidth (int): Edge line width (default: 2)
-        
-        Returns:
-            int: Number of crystals highlighted
-        
-        Example:
-            # Highlight reco digis 0, 1 in event 0
-            n_high = calo_vis.highlight_reco_digis(ax, crysmap, data, evt_idx=0,
-                                                   reco_indices=[0, 1])
-        """
-        try:
-            import awkward as ak
-            
-            # Extract mapping from reco to calo digis
-            reco_caloDigiIdx = data["calo"]["calorecodigis.caloDigiIdx_"]
-            reco_indices = np.array(reco_indices, dtype=int)
-            
-            idx_list = ak.to_list(reco_caloDigiIdx[evt_idx])
-            if isinstance(idx_list, list) and len(idx_list) > 0 and isinstance(idx_list[0], list):
-                idx_list = [val for sublist in idx_list for val in (sublist if isinstance(sublist, list) else [sublist])]
-            
-            # Get calo digi indices for specified reco indices
-            calo_digi_indices = []
-            for reco_idx in reco_indices:
-                if reco_idx < len(idx_list):
-                    calo_idx_data = idx_list[reco_idx]
-                    # Handle both single values and lists
-                    if isinstance(calo_idx_data, (list, tuple)):
-                        calo_digi_indices.extend(calo_idx_data)
-                    else:
-                        calo_digi_indices.append(int(calo_idx_data))
-            
-            # Now highlight those calorimeter digis
-            n_highlighted = self.highlight_digis(
-                ax, crysmap, data, evt_idx, calo_digi_indices, disk=disk,
-                color=color, edge_color=edge_color, linewidth=linewidth
-            )
-            
-            self.logger.log(f"Highlighted {len(reco_indices)} reco digis ({n_highlighted} crystals) for event {evt_idx}", "info")
-            return n_highlighted
-        except Exception as e:
-            self.logger.log(f"Error highlighting reco digis: {e}", "error")
-            return 0
-    
+
+
+
     def plot_event_display(self, crysmap, data, evt_idx, disk=0, output_file=None,
                               show_digis=True, show_reco_digis=True, show_hits=False, 
                               show_clusters=False, show_pipes=False, figsize=(14, 12)):
@@ -1396,3 +892,6 @@ class CaloVisualization:
         
         except Exception as e:
             self.logger.log(f"Error drawing pipes: {e}", "warning")
+    
+
+

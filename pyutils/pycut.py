@@ -422,7 +422,7 @@ class CutManager:
             # Use the first (now filtered) list as template
             template = cut_flow_list[0]
             
-            # Debug: log what we're getting
+            # log what we're getting
             self.logger.log(f"Template type: {type(template)}", "info")
             if isinstance(template, dict):
                 self.logger.log(f"Template is a dict with keys: {list(template.keys())}", "info")
