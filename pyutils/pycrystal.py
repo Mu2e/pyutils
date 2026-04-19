@@ -351,67 +351,6 @@ class CrystalMap:
                 
                 quad_idx += 1
 
-    def _draw_pipes_lightweight(
-        self,
-        ax: plt.Axes,
-        pipe_color: str = 'red',
-        pipe_alpha: float = 0.5,
-        label_pipes: bool = True,
-    ) -> None:
-        """
-        Draw lightweight pipe centerlines (no fills).
-        
-        Memory-efficient version that only draws pipe centerlines without filled regions.
-        Useful for overlays with many other elements.
-        
-        Args:
-            ax (plt.Axes): Matplotlib axes to draw on
-            pipe_color (str): Color for pipe outlines
-            pipe_alpha (float): Transparency of pipe elements
-            label_pipes (bool): Whether to label each pipe with its index
-        """
-        geom = self.pipe_geometry
-        n_pipes = len(geom.pipe_tor_radii)
-        sign_values = [-1.0, 1.0]
-        
-        quad_idx = 0
-        for sign_x in sign_values:
-            for sign_y in sign_values:
-                for idx in range(n_pipes):
-                    rad_lg_tor = geom.pipe_tor_radii[idx]
-                    phi_lbd = geom.large_tor_phi[idx]
-                    phi_sbd = geom.small_tor_phi[idx]
-                    phi_end = geom.phi_end[idx]
-                    y_pos = geom.yposition[idx] if idx < len(geom.yposition) else geom.ysmall[idx]
-                    
-                    # Large torus arc centerline
-                    phi_lg_max = np.radians(phi_lbd / 2)
-                    theta_lg = np.linspace(0, phi_lg_max, 40)
-                    x_lg = sign_x * rad_lg_tor * np.cos(theta_lg)
-                    y_lg = sign_y * rad_lg_tor * np.sin(theta_lg)
-                    ax.plot(x_lg, y_lg, color=pipe_color, linewidth=2, alpha=pipe_alpha)
-                    
-                    # Small torus arc centerline
-                    x_sm_center = geom.xsmall + geom.xdistance * idx
-                    phi_sm_start = 180.0 + phi_lbd / 2.0 - phi_sbd
-                    phi_sm_end = 180.0 + phi_lbd / 2.0
-                    
-                    theta_sm = np.linspace(np.radians(phi_sm_start), np.radians(phi_sm_end), 40)
-                    x_sm = sign_x * (x_sm_center + geom.rad_smtor * np.cos(theta_sm))
-                    y_sm = sign_y * (y_pos + geom.rad_smtor * np.sin(theta_sm))
-                    ax.plot(x_sm, y_sm, color=pipe_color, linewidth=2, alpha=pipe_alpha)
-                    
-                    # Straight section centerline
-                    y_manifold = sign_y * geom.rinner_manifold * np.sin(np.radians(90.0 - phi_end))
-                    x_start = sign_x * (geom.xsmall + geom.xdistance * idx - geom.rad_smtor * np.cos(np.radians(phi_end)))
-                    y_start = sign_y * (y_pos + geom.rad_smtor * np.sin(np.radians(phi_end)))
-                    x_end = sign_x * (geom.xsmall + geom.xdistance * idx)
-                    y_end = y_manifold
-                    
-                    ax.plot([x_start, x_end], [y_start, y_end], color=pipe_color, linewidth=2, alpha=pipe_alpha)
-                
-                quad_idx += 1
-
     
     def visualize_all_disks(
         self,
