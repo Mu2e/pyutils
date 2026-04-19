@@ -332,7 +332,23 @@ class CutManager:
             cumulative_mask = current_mask
 
             # Calculate event-level efficiency
-            event_mask = ak.any(current_mask, axis=-1) # events that have ANY True combined mask
+            # Handle both 1D (event-level) and multi-dimensional (track-level) masks
+            try:
+                # Try to get mask depth - if it's 1D (event-level), use directly
+                mask_depth = len(current_mask.layout.parameters.get('layout', {}).get('axis', []))
+                if mask_depth <= 1:
+                    # 1D event-level mask - use directly
+                    event_mask = current_mask
+                else:
+                    # Multi-dimensional mask - reduce to event level
+                    event_mask = ak.any(current_mask, axis=-1)
+            except:
+                # Fallback: try ak.any first, if it fails then it's already 1D
+                try:
+                    event_mask = ak.any(current_mask, axis=-1)
+                except:
+                    event_mask = current_mask
+            
             events_passing = ak.sum(event_mask) # Count up these events
             absolute_frac = events_passing / total_events * 100
             relative_frac = (events_passing / cut_flow[-1]["events_passing"] * 100 
@@ -406,9 +422,27 @@ class CutManager:
             # Use the first (now filtered) list as template
             template = cut_flow_list[0]
             
+            # log what we're getting
+            self.logger.log(f"Template type: {type(template)}", "info")
+            if isinstance(template, dict):
+                self.logger.log(f"Template is a dict with keys: {list(template.keys())}", "info")
+                # Convert dict to list format
+                template = [template]
+            elif isinstance(template, list):
+                self.logger.log(f"Template is a list with {len(template)} items", "info")
+                if len(template) > 0:
+                    self.logger.log(f"First element type: {type(template[0])}", "info")
+            else:
+                self.logger.log(f"Unexpected template type: {type(template)}", "error")
+                return None
+            
             # Use the template to initialise combined stats
             combined_cut_flow = []
             for cut in template:
+                # Check if cut is a dict, skip if not
+                if not isinstance(cut, dict):
+                    self.logger.log(f"Warning: Expected dict for cut, got {type(cut)}: {cut}", "warning")
+                    continue
                 # Create a copy (needed?)
                 cut_copy = {k: v for k, v in cut.items()}
                 # Reset the event count
@@ -420,7 +454,13 @@ class CutManager:
             
             # Sum up events_passing for each cut across all files
             for cut_flow in cut_flow_list:
+                # Handle both list and dict formats
+                if isinstance(cut_flow, dict):
+                    cut_flow = [cut_flow]
                 for cut in cut_flow:
+                    # Skip non-dict items
+                    if not isinstance(cut, dict):
+                        continue
                     cut_name = cut["name"]
                     # Only process cuts that are in our combined_stats
                     if cut_name in cut_name_to_index:
