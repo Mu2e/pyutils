@@ -51,6 +51,7 @@ pyvector    # Element wise wector operations
 pymcutil    # Monte Carlo utilities (coming soon)
 pylogger    # Helper module for managing printouts
 pydisplay   # allows user to call Mu2e/EventDisplay directly through python
+pycalo      # initial helper classes for calorimeter based analysis (preliminary)
 ```
 
 ### 2.1 Demos and tutorials
@@ -1316,7 +1317,50 @@ class Display:
 </details>
 
 
+#### `pycalo`
 
+This module contains helper functions for calorimeter analysis and visualization. `pycalo` provides classes for mapping calorimeter digitization data, comparing reconstruction vs. MC energy, and visualizing event displays with crystal-level detail.
+
+**Main Classes:**
+
+- **`PipeGeometry`**: Represents the geometry of the 5 calibration pipes in the calorimeter disk. Calculates pipe center positions and provides methods for pipe-based analysis.
+
+- **`CaloAnalysis`**: Handles calorimeter data analysis tasks:
+  - `map_digi_to_reco()`: Maps digitized hits to reconstructed digis by position matching
+  - `map_reco_to_digi()`: Reverse mapping from reco digis to raw digis
+  - `get_matching_reco_for_digi()`: Get reconstructed hit for a specific digi
+  - `compare_reco_vs_mc_energy()`: Per-crystal comparison of MC truth energy vs. reconstructed energy
+
+- **`CaloVisualization`**: Creates event displays and visualizations:
+  - `load_crystal_map()`: Loads crystal geometry from calorimeter DMAP file (caloDMAP_nominal.dat)
+  - `plot_crystal_grid()`: Renders crystal hexagonal grid on matplotlib axes
+  - `plot_event_display()`: Main method creating event displays with highlighted crystals for digis, reco digis, and calibration pipes
+  - `find_crystals_by_position()`: Locates crystal IDs for given (x, y) coordinates
+  - `highlight_hit_crystals()`: Highlights specific crystals with color and labels
+  - `set_2d_axis_limits()`: Configures plot axes for crystal map visualization
+
+**Usage Example:**
+
+```python
+from pyutils.pycalo import CaloAnalysis, CaloVisualization
+
+# Create visualization object and load crystal map
+calo_vis = CaloVisualization()
+calo_vis.load_crystal_map()  # Loads from caloDMAP_nominal.dat
+
+# Create event display showing digis and reco digis
+fig, ax = calo_vis.plot_event_display(
+    calo_vis.crystals_by_disk,  # Crystal map
+    data,                         # Event data (awkward array)
+    evt_idx=0,                    # Event index
+    disk=0,                       # Calorimeter disk
+    show_digis=True,
+    show_reco_digis=True,
+    output_file='event_display.png'
+)
+```
+
+>**Note**: This is a preliminary module and will evolve a lot in the coming weeks
 
 ## 3. Instructions for developers  
 
