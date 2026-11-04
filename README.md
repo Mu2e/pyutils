@@ -64,6 +64,7 @@ To learn by example, follow the `pyutils` tutorial series.
 1. [pyplot_demo.ipynb](examples/notebooks/pyplot_demo.ipynb) - A comprehensive demonstration of the `pyplot.Plot` class.
 1. [pycut_demo.ipynb](examples/notebooks/pycut_demo.ipynb) - A comprehensive demonstration of the `pycut.CutManager` class.
 1. [pyutils_mctruth.ipynb](examples/notebooks/pyutils_mctruth.ipynb) - Examples of how to use the mc truth interface for simulation based studies.
+1. [pycalo_demo.ipynb](examples/notebooks/pycalo_demo.ipynb) - Calorimeter crystal map, calibration source pipes, event displays and calorimeter data products with `pycalo`. A command-line event display is in [calo_event_display.py](examples/scripts/calo_event_display.py).
 
 To open a jupyter notebook on the mu2e machines:
 
@@ -614,6 +615,8 @@ CLASSES
 #### `pyselect`
 
 Tools for creating and managing selection cut masks. 
+
+Surface names used by `select_surface` (e.g. `"TT_Front"`, `"ST_Foils"`, `"CRV_T1"`) follow the official Offline [`SurfaceId`](https://github.com/Mu2e/Offline/blob/main/DataProducts/inc/SurfaceId.hh) names, and are loaded from `pyutils/configs/surface_ids.json` (see [Updating surface IDs](#updating-surface-ids)).
 
 
 <details>
@@ -1333,8 +1336,8 @@ This module contains helper functions for calorimeter analysis and visualization
 
 - **`CaloVisualization`**: Creates event displays and visualizations:
   - `load_crystal_map()`: Loads crystal geometry from calorimeter DMAP file (caloDMAP_nominal.dat)
-  - `plot_crystal_grid()`: Renders crystal hexagonal grid on matplotlib axes
-  - `plot_event_display()`: Main method creating event displays with highlighted crystals for digis, reco digis, and calibration pipes
+  - `plot_crystal_grid()`: Renders the square crystal grid on matplotlib axes
+  - `plot_event_display()`: Main method creating event displays with highlighted crystals for digis, reco digis, and calibration pipes. Crystals are identified from the digi SiPM ID (crystal ID = SiPMID // 2)
   - `find_crystals_by_position()`: Locates crystal IDs for given (x, y) coordinates
   - `highlight_hit_crystals()`: Highlights specific crystals with color and labels
   - `set_2d_axis_limits()`: Configures plot axes for crystal map visualization
@@ -1350,8 +1353,7 @@ calo_vis.load_crystal_map()  # Loads from caloDMAP_nominal.dat
 
 # Create event display showing digis and reco digis
 fig, ax = calo_vis.plot_event_display(
-    calo_vis.crystals_by_disk,  # Crystal map
-    data,                         # Event data (awkward array)
+    data=data,                    # Event data (awkward array)
     evt_idx=0,                    # Event index
     disk=0,                       # Calorimeter disk
     show_digis=True,
@@ -1387,6 +1389,17 @@ which should return
 ```
 
 Your changes will be automatically be applied to the `pyutils` installed in your environment, with no need to rerun the `pip` command, and you can import modules and classes using the same syntax as normal.
+
+### Updating surface IDs
+
+The surface ID map in `pyutils/configs/surface_ids.json` is generated from Offline's `SurfaceId.hh`. When new surfaces are added to Offline, regenerate it and commit the result:
+
+```bash
+python scripts/update_surface_ids.py                     # from Mu2e/Offline main on GitHub
+python scripts/update_surface_ids.py --offline /path/to/Offline   # or from a local Offline checkout
+```
+
+The script prints which surfaces were added or removed, and warns if any existing ID changed value (this should not happen, so check before committing).
 
 ## Contact
 

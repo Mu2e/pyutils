@@ -1,9 +1,6 @@
-from pyutils.pylogger import Logger
+import os
 import subprocess
-
-
 from shutil import which
-import subprocess
 from typing import Optional
 
 from pyutils.pylogger import Logger
@@ -22,10 +19,14 @@ class Display:
       * mu2einit
       * muse setup
       * assumes local copy of EventDisplay via clone or musing
+      If ``config`` is not given, defaults to
+      $MUSE_WORK_DIR/EventDisplay/examples/nominal_MDC2025.fcl
     """
 
-    def __init__(self, verbosity: int = 1, config: str = "/exp/mu2e/app/users/sophie/newOffline/EventDisplay/examples/nominal_MDC2025.fcl") -> None:
+    def __init__(self, verbosity: int = 1, config: Optional[str] = None) -> None:
         self.logger = Logger(print_prefix="[pydisplay]", verbosity=verbosity)
+        if config is None:
+            config = os.path.join(os.environ.get("MUSE_WORK_DIR", "."), "EventDisplay/examples/nominal_MDC2025.fcl")
         self.config = config
 
     def _check_cmd(self, cmd: str) -> bool:

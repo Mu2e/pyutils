@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+import json
+import os
 import uproot
 import awkward as ak
 import numpy as np
@@ -29,32 +31,33 @@ class Select:
         }
         
         # SIDs see: https://github.com/Mu2e/Offline/blob/main/DataProducts/inc/SurfaceId.hh for definitions
-        self.surface_id_map = { # Storing the mapping in a dictionary
-            "TT_Front" :0,
-            "TT_Mid" : 1,
-            "TT_Back" : 2,
-            "TT_Inner" : 3,
-            "TT_Outer" : 4,
-            "DS_Inner" : 82,
-            "DS_Outer" : 83,
-            "ST_Front": 100,
-            "ST_Back" : 101,
-            "ST_Inner" : 102,
-            "ST_Outer" : 103,
-            "ST_Foils" : 104,
-            "ST_Wires" : 105,
-            "IPA" : 90,
-            "IPA Front" : 91,
-            "IPA Back" : 92,
-            "OPA" : 95,
-            "TSDA" : 96,
-            "TCRV" : 200        
+        # Generated from Offline by scripts/update_surface_ids.py, rerun that script to pick up new surfaces
+        surface_ids_path = os.path.join(os.path.dirname(__file__), "configs", "surface_ids.json")
+        with open(surface_ids_path) as f:
+            self.surface_id_map = json.load(f)["surface_ids"]
+
+        # Deprecated names from earlier pyutils versions, mapped to their official Offline names
+        self._surface_name_aliases = {
+            "IPA Front" : "IPA_Front",
+            "IPA Back" : "IPA_Back"
         }
 
     def get_surface_name(self, sid):
         """Convert an integer surface ID (sid) to a meaningful name.
-        """       
-        return self.surface_id_map.get(sid)
+        """
+        for name, surface_id in self.surface_id_map.items():
+            if surface_id == sid:
+                return name
+        return None
+
+    def get_surface_id(self, surface_name):
+        """Convert a surface name to its integer surface ID (sid).
+        """
+        if surface_name in self._surface_name_aliases:
+            official_name = self._surface_name_aliases[surface_name]
+            self.logger.log(f"Surface name '{surface_name}' is deprecated, use '{official_name}'", "warning")
+            surface_name = official_name
+        return self.surface_id_map.get(surface_name)
         
     def is_electron(self, data):
         """ Return boolean array for electron tracks which can be used as a mask 
@@ -135,7 +138,7 @@ class Select:
             return None
             
     def is_downstream(self, data, branch_name="trksegs"):
-        """ Return boolean array for upstream track segments
+        """ Return boolean array for downstream track segments
 
             Args:
                 data (awkward.Array): Input array containing the segments branch
@@ -151,7 +154,7 @@ class Select:
             return None
 
     def is_upstream(self, data, branch_name="trksegs"):
-        """ Return boolean array for downstream track segments 
+        """ Return boolean array for upstream track segments
 
             Args:
                 data (awkward.Array): Input array containing the segments branch
@@ -159,9 +162,9 @@ class Select:
         """
         try:
             # Construct & return mask
-             mask = (data["trksegs"]["mom"]["fCoordinates"]["fZ"] < 0)
-             self.logger.log(f"Returning mask for upstream track segments (p_z < 0)", "success")
-             return mask
+            mask = (data[branch_name]["mom"]["fCoordinates"]["fZ"] < 0)
+            self.logger.log(f"Returning mask for upstream track segments (p_z < 0)", "success")
+            return mask
         except Exception as e:
             self.logger.log(f"Exception in is_upstream(): {e}", "error")
             return None
@@ -179,8 +182,11 @@ class Select:
             See https://github.com/Mu2e/Offline/blob/main/DataProducts/inc/SurfaceId.hh for surface_names.
         """
         # convert the string to the int underneath
-        sid = self.get_surface_name(surface_name)
-        
+        sid = self.get_surface_id(surface_name)
+        if sid is None:
+            self.logger.log(f"Unknown surface name '{surface_name}'. Expected one of {list(self.surface_id_map)}", "error")
+            return None
+
         try:
             # Construct & return mask
             mask = (data[branch_name]['sid']==sid)# & (data[branch_name]['sindex']==sindex)
@@ -203,7 +209,8 @@ class Select:
         return None
             
     def has_OPA(self, data):
-      """returns mask True if the event has at no OPA viable extrapolation
+      """returns mask True if the event has NO OPA viable extrapolation
+      (i.e. use this mask to veto OPA-intersecting tracks; name kept for backwards compatibility)
       """
       try:
         trk_opa  = self.select_surface(data, surface_name="OPA")
@@ -266,7 +273,7 @@ class Select:
         try:
             # Construct & return mask
             mask = (data["trkpid.result"] > value)
-            self.logger.log(f"Returning mask for trkqual > {value}", "success")
+            self.logger.log(f"Returning mask for trkpid > {value}", "success")
             return mask
         except Exception as e:
             self.logger.log(f"Exception in select_trkpid(): {e}", "error")

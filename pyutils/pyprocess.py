@@ -98,7 +98,7 @@ class Processor:
                 file_list = [line.strip() for line in file_list if line.strip()]
 
                 if (len(file_list) > 0):
-                    self.logger.log(f"Successfully loaded file list\n\tPath: {defname}\n\tCount: {len(file_list)} files", "success")
+                    self.logger.log(f"Successfully loaded file list\n\tPath: {file_list_path}\n\tCount: {len(file_list)} files", "success")
                 else: 
                     self.logger.log(f"File list has length {len(file_list)}{help_message}", "warning")
                 
@@ -291,7 +291,7 @@ class Processor:
             use_processes=use_processes
         )
 
-        if len(results) == 0:
+        if not results: # None (empty file list) or no successful results
             self.logger.log(f"Results list has length zero", "warning")
             return None
 
