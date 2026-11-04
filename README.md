@@ -56,15 +56,18 @@ pycalo      # initial helper classes for calorimeter based analysis (preliminary
 
 ### 2.1 Demos and tutorials
 
-To learn by example, follow the `pyutils` tutorial series.
+To learn by example, follow the `pyutils` tutorial series. Most of the examples read the MDS4b ensemble ntuple (`nts.mu2e.ensembleNtuple.MDC2025-001_MDS4b.root`), which is on persistent dCache. The `pycalo` demo uses a cosmic run ntuple instead, because the calorimeter digi branches are not in the ensemble.
 
 1. [pyutils_basics.ipynb](examples/notebooks/pyutils_basics.ipynb) - Introduction to core functionality
 1. [pyutils_on_EAF.ipynb](examples/notebooks/pyutils_on_EAF.ipynb) - Reading data with `pyutils` from the Elastic Analysis Facility (EAF) 
 1. [pyutils_multifile.ipynb](examples/notebooks/pyutils_multifile.ipynb) - Basic parallelisation with file lists and SAM definitions, as well as complex parallelised analysis tasks using the `pyprocess` `Skeleton` template class.
 1. [pyplot_demo.ipynb](examples/notebooks/pyplot_demo.ipynb) - A comprehensive demonstration of the `pyplot.Plot` class.
 1. [pycut_demo.ipynb](examples/notebooks/pycut_demo.ipynb) - A comprehensive demonstration of the `pycut.CutManager` class.
-1. [pyutils_mctruth.ipynb](examples/notebooks/pyutils_mctruth.ipynb) - Examples of how to use the mc truth interface for simulation based studies.
+1. [pyutils_mctruth.ipynb](examples/notebooks/pyutils_mctruth.ipynb) - The MC truth interface: truth masks, following the MC particle chain of a track to its generator, event-level truth with `primary`, and true momentum.
+1. [pyutils_ensemble_analysis.ipynb](examples/notebooks/pyutils_ensemble_analysis.ipynb) - A complete CE-style analysis on the MDS4b ensemble: selection and cut flows by true origin, momentum spectra and resolution, and scaling up to many files with `Skeleton`, combining histograms and cut flows.
 1. [pycalo_demo.ipynb](examples/notebooks/pycalo_demo.ipynb) - Calorimeter crystal map, calibration source pipes, event displays and calorimeter data products with `pycalo`. A command-line event display is in [calo_event_display.py](examples/scripts/calo_event_display.py).
+
+Each of the first seven notebooks has a matching script in [examples/scripts](examples/scripts), with the same code and the markdown as comments, for running from the command line (for example `python examples/scripts/pyutils_ensemble_analysis.py`). Plots and tables are written to the current directory. The scripts are generated from the notebooks, so edit the notebook and then regenerate them with `python scripts/nb_to_script.py`.
 
 To open a jupyter notebook on the mu2e machines:
 

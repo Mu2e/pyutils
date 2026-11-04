@@ -781,8 +781,8 @@ class Plot:
         if labels and len(labels) >= 2:
             from matplotlib.patches import Patch
             legend_elements = [
-                Patch(facecolor=plt.cm.get_cmap(cmap1)(0.7), alpha=alpha, label=labels[0]),
-                Patch(facecolor=plt.cm.get_cmap(cmap2)(0.7), alpha=alpha, label=labels[1])
+                Patch(facecolor=plt.get_cmap(cmap1)(0.7), alpha=alpha, label=labels[0]),
+                Patch(facecolor=plt.get_cmap(cmap2)(0.7), alpha=alpha, label=labels[1])
             ]
             ax.legend(handles=legend_elements, loc=leg_pos)
     

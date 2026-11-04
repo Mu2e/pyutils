@@ -1,30 +1,51 @@
 """
 pyplot demo
-==================
+===========
 
-This standalone script demonstrates the plotting capabilities of the pyutils.pyplot module.
+This standalone notebook demonstrates the plotting capabilities of the
+`pyutils.pyplot` module.
 It shows how to create various types of plots with different styling options
 and configurations for scientific data visualisation.
 
+Overview
+
+This demonstration covers:
+- Basic 1D histograms with statistics boxes
+- Styled single histograms using the `styles` parameter
+- Multi-histogram overlays with custom styling
+- Weighted histograms
+- 2D histograms and overlays
+- Log scale plotting
+- Scatter plots with error bars
+- Publication-quality styling examples
+
+Generated from examples/notebooks/pyplot_demo.ipynb by scripts/nb_to_script.py.
+Edit the notebook and regenerate, rather than editing this script.
 """
 
-# 1. Setting up your environment
+# ======================================================================================
+# 1. Setting up the Environment
+# ======================================================================================
+#
+# First, we import the necessary external packages and set up our logging system.
 
 # Import necessary external packages
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 2. Initialize Logger
-
 # Import and setup the logger for consistent messaging
 from pyutils.pylogger import Logger
 
-# Initialize logger with demo-specific prefix
+# Initialise logger with demo-specific prefix
 logger = Logger(print_prefix="[pyplot demo]", verbosity=2)
 
-# 3. Generating Example Data
+# ======================================================================================
+# 2. Generating example data
+# ======================================================================================
+#
+# Create synthetic datasets that mimic physics analysis data. This includes signal data,
+# background data (broader distribution), and detector efficiency weights.
 
-# Create synthetic datasets that mimic physics analysis data
 logger.log("Starting data generation for plotting demonstrations", "info")
 
 # Simulate detector response data
@@ -42,22 +63,31 @@ background_time = np.random.uniform(400, 1600, 8000)
 all_momentum = np.concatenate([signal_momentum, background_momentum])
 all_time = np.concatenate([signal_time, background_time])
 
-# Detector efficiency weights (simulate realistic weighting)
+# Detector efficiency weights 
 signal_weights = np.random.uniform(0.8, 1.0, len(signal_momentum))
 background_weights = np.random.uniform(0.3, 0.9, len(background_momentum))
 
 logger.log(f"Generated {len(signal_momentum)} signal events", "info")
 logger.log(f"Generated {len(background_momentum)} background events", "info")
 
-# 4. Plotting with pyplot
+# ======================================================================================
+# 3. Initialising pyplot
+# ======================================================================================
+#
+# Import the Plot class and initialise it with appropriate verbosity settings.
 
 # Import the Plot class
 from pyutils.pyplot import Plot 
 
-# Initialize the plotter with increased verbosity
+# Initialise the plotter with increased verbosity
 plotter = Plot(verbosity=2)
 
-# 4.1 Basic 1D Histogram
+# ======================================================================================
+# 4. Basic 1D Histogram
+# ======================================================================================
+#
+# Create a simple 1D histogram showing the momentum distribution with statistics box,
+# errors, and error bars.
 
 logger.log("Creating basic 1D histogram demonstration", "info")
 
@@ -74,20 +104,24 @@ plotter.plot_1D(
     stat_box=True,
     stat_box_errors=True,
     error_bars=True
-    # show=True
 )
 
-# Show help for the method
+# Uncomment to see help for the method
 # help(plotter.plot_1D)
 
-# 4.2 Styled 1D Histogram
+# ======================================================================================
+# 5. Styled 1D histogram
+# ======================================================================================
+#
+# Demonstrate the new `styles` parameter for single histograms. This allows you to
+# customise histogram type, colours, transparency, and line properties.
 
 logger.log("Demonstrating styled 1D histogram with new styles parameter", "info")
 
 # Demonstrate the new styles parameter for single histograms
 style_config = {
     "histtype": "stepfilled",
-    "color": "skyblue", 
+    "color": "red", 
     "alpha": 0.7,
     "linewidth": 2
 }
@@ -95,18 +129,24 @@ style_config = {
 plotter.plot_1D(
     array=signal_momentum,
     styles=style_config,
-    nbins=40,
+    nbins=50,
     xmin=95,
-    xmax=115,
-    title="Signal momentum (Styled)",
+    xmax=120,
+    title="Signal momentum (styled)",
     xlabel="Momentum [MeV/c]",
     ylabel="Events",
     out_path="demo_momentum_styled.png",
     stat_box=True,
-    under_over=True  # Show overflow/underflow statistics
+    under_over=True,  # Show overflow/underflow statistics
+    leg_pos="best"
 )
 
-# 4.3 Overlaying 1D Histograms
+# ======================================================================================
+# 6. Overlaying 1D histograms
+# ======================================================================================
+#
+# Create overlaid histograms with custom styling for each dataset. This is useful for
+# comparing different data samples or analysis cuts.
 
 logger.log("Creating 1D histogram overlay with multiple datasets", "info")
 
@@ -146,13 +186,18 @@ plotter.plot_1D_overlay(
     xmax=150,
     title="Momentum comparison",
     xlabel="Momentum [MeV/c]",
-    ylabel="Normalised Events",
+    ylabel="Normalised events",
     norm_by_area=True,  # Normalise for comparison
     leg_pos="best",
     out_path="demo_momentum_overlay.png"
 )
 
-# 4.4 Weighted Histogram Overlay
+# ======================================================================================
+# 7. Weighted histogram overlay
+# ======================================================================================
+#
+# Demonstrate weighted histograms, which are useful when dealing with corrections to
+# data.
 
 logger.log("Demonstrating weighted histogram functionality", "info")
 
@@ -181,16 +226,21 @@ plotter.plot_1D_overlay(
     hists_dict=weighted_data,
     weights=weights_list,
     styles=weighted_styles,
-    nbins=50,
+    nbins=100,
     xmin=80,
-    xmax=150,
+    xmax=170,
     title="Weighted momentum distributions",
     xlabel="Momentum [MeV/c]",
     ylabel="Events",
     out_path="demo_momentum_weighted.png"
 )
 
-# 4.5 2D Histogram
+# ======================================================================================
+# 8. 2D histogram
+# ======================================================================================
+#
+# Create a 2D histogram to explore correlations between two variables, in this case
+# momentum vs time.
 
 logger.log("Creating 2D histogram showing momentum vs time correlation", "info")
 
@@ -208,17 +258,21 @@ plotter.plot_2D(
     xlabel="Momentum [MeV/c]",
     ylabel="Time [ns]",
     zlabel="Events",
-    cmap="viridis",
+    cmap="inferno",
     out_path="demo_momentum_vs_time.png"
 )
 
-# 4.6 2D Histogram Overlay
+# ======================================================================================
+# 9. 2D histogram overlay
+# ======================================================================================
+#
+# Demonstrate overlaying two 2D histograms with different colour maps. This is useful
+# for comparing correlations between different distributions.
 
 logger.log("Demonstrating 2D histogram overlay capabilities", "info")
 
 # Demonstrate 2D overlay with signal and background
 plotter.plot_2D_overlay(
-
     x1=background_momentum, 
     y1=background_time,
     x2=signal_momentum,
@@ -234,13 +288,17 @@ plotter.plot_2D_overlay(
     ylabel="Time [ns]",
     cmap1="Blues",
     cmap2="Reds",
-    alpha=0.6, # tranparency of the overlay
+    alpha=0.6,  # Transparency of the overlay
     labels=["Background", "Signal"],
     leg_pos="upper right",
     out_path="demo_2d_overlay.png"
 )
 
-# 4.7 Log Scale Demonstrations
+# ======================================================================================
+# 10. Log scales
+# ======================================================================================
+#
+# Show how to use logarithmic scales for data spanning multiple orders of magnitude.
 
 logger.log("Creating log scale plot demonstrations", "info")
 
@@ -283,7 +341,12 @@ plotter.plot_2D(
     out_path="demo_2d_log.png"
 )
 
-# 4.8 Scatter Plots
+# ======================================================================================
+# 11. Scatter plots
+# ======================================================================================
+#
+# Demonstrate scatter plots with error bars, useful for showing relationships between
+# discrete measured quantities.
 
 logger.log("Creating scatter plot demonstrations", "info")
 
@@ -307,7 +370,11 @@ plotter.plot_graph(
     out_path="demo_scatter.png"
 )
 
-# 4.9 Multiple Scatter Plots
+# ======================================================================================
+# 12. Scatter plot overlay
+# ======================================================================================
+#
+# Show how to overlay multiple scatter plots for comparison.
 
 logger.log("Creating multiple scatter plot overlay", "info")
 
@@ -320,7 +387,7 @@ x2 = np.linspace(0, 10, 40)
 y2 = -0.5 * x2 + 8 + np.random.normal(0, 0.8, 40)
 y2_err = np.random.uniform(0.3, 0.6, 40)
 
-# Organize data for overlay
+# Organise data for overlay
 graph_data = {
     "Positive slope": {
         "x": x1,
@@ -343,7 +410,12 @@ plotter.plot_graph_overlay(
     out_path="demo_scatter_overlay.png"
 )
 
-# 4.10 Advanced Styling Example
+# ======================================================================================
+# 13. Advanced styling
+# ======================================================================================
+#
+# Create a publication-quality plot demonstrating advanced styling techniques, including
+# LaTeX formatting in labels.
 
 logger.log("Demonstrating advanced publication-quality styling", "info")
 
@@ -391,10 +463,20 @@ plotter.plot_1D_overlay(
     out_path="demo_publication_style.png"
 )
 
+# ======================================================================================
+# 14. Summary
+# ======================================================================================
+#
+# Log completion status and provide summary information.
+
 logger.log("All plotting demonstrations completed successfully", "success")
 logger.log("Check the generated PNG files to see the different plotting capabilities", "info")
 
-# 5. Additional Tips and Best Practices
+# ======================================================================================
+# 15. Tips
+# ======================================================================================
+#
+# Some recommendations for effective plotting:
 
 logger.log("Providing plotting best practices and tips", "info")
 
@@ -406,11 +488,18 @@ tips = [
     "Use error_bars=True for data with statistical uncertainties",
     "Choose appropriate bin numbers (typically 20-100 for most cases)",
     "Use log scales for data spanning multiple orders of magnitude",
-    "Save plots with sufficient DPI (300+) for publications"
+    "Save plots with sufficient DPI (300+) for publications",
+    "PNG files work well with Slack and email, PDFs work well with LaTeX"
 ]
 
 for i, tip in enumerate(tips, 1):
     logger.log(f"Tip {i}: {tip}", "max")
+
+# ======================================================================================
+# 16. Getting Help
+# ======================================================================================
+#
+# For detailed documentation on any plotting method, use Python's built-in help system:
 
 logger.log("For more detailed help on any method, use help():", "max")
 logger.log("help(plotter.plot_1D)", "max")
@@ -419,3 +508,11 @@ logger.log("help(plotter.plot_2D)", "max")
 logger.log("help(plotter.plot_2D_overlay)", "max")
 logger.log("help(plotter.plot_graph)", "max")
 logger.log("help(plotter.plot_graph_overlay)", "max")
+
+# Uncomment any of these lines to see detailed help:
+# help(plotter.plot_1D)
+# help(plotter.plot_1D_overlay)
+# help(plotter.plot_2D)
+# help(plotter.plot_2D_overlay)
+# help(plotter.plot_graph)
+# help(plotter.plot_graph_overlay)
