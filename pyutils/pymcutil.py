@@ -181,10 +181,6 @@ class MC:
     """
 
     # Check for empty data
-    if ak.num(data['trkmc'], axis=0) == 0:
-      self.logger.log("No events found in the data.", "warning")
-      return []
-
     if ak.num(data, axis=0) == 0:
       self.logger.log("No events found in the data.", "warning")
       return []
@@ -259,10 +255,9 @@ class MC:
     
     primary_mask = particle_count_return != -2
 
-    # Apply the mask to the flattened array to select desired elements
+    # Keep the first labelled particle per event, dropping events with none
     particle_count_return = particle_count_return[primary_mask]
-    particle_count_return = [[sublist[0]] for sublist in particle_count_return]
-    particle_count_return = ak.flatten(particle_count_return, axis=None)
+    particle_count_return = ak.drop_none(ak.firsts(particle_count_return, axis=1))
     self.logger.log(f"returned particle count length {len(particle_count_return)}", "info")
     
     return particle_count_return

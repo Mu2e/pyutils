@@ -313,6 +313,10 @@ class Plot:
         # Show 
         if show: 
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
         
     def plot_1D_overlay(
         self,
@@ -466,6 +470,10 @@ class Plot:
         # Show 
         if show: 
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
         
     def plot_2D(
         self,
@@ -605,6 +613,10 @@ class Plot:
         # Show if requested
         if show:
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
 
     def plot_2D_overlay(
         self,
@@ -801,6 +813,10 @@ class Plot:
         # Show if requested
         if show:
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
             
     def plot_graph(
         self,
@@ -909,6 +925,10 @@ class Plot:
         # Show if requested
         if show:
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
   
     def plot_graph_overlay(
         self,
@@ -1036,3 +1056,7 @@ class Plot:
         # Show 
         if show:
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)

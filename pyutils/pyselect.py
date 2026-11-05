@@ -169,13 +169,13 @@ class Select:
             self.logger.log(f"Exception in is_upstream(): {e}", "error")
             return None
 
-    def select_surface(self, data, surface_name="TT_Front", sindex=0, branch_name="trksegs"):
+    def select_surface(self, data, surface_name="TT_Front", sindex=None, branch_name="trksegs"):
         """ Return boolean array for track segments intersecting a specific surface 
         
         Args:
             data (awkward.Array): Input array containing segments branch
             surface_name (str) : Official name of the intersected surface. Defaults to "TT_Front". 
-            sindex (int, optional): Index to the intersected surface (for multi-surface elements). Defaults to 0. 
+            sindex (int, optional): Index to the intersected surface (for multi-surface elements). Defaults to None (any index). 
             branch_name (str, optional): Name of the segments branch for backwards compatibility. Defaults to 'trksegs'.
 
         Notes: 
@@ -189,8 +189,12 @@ class Select:
 
         try:
             # Construct & return mask
-            mask = (data[branch_name]['sid']==sid)# & (data[branch_name]['sindex']==sindex)
-            self.logger.log(f"Returning mask for {branch_name} with sid = {sid}", "success") #and sindex = {sindex}"
+            mask = (data[branch_name]['sid']==sid)
+            if sindex is not None:
+                mask = mask & (data[branch_name]['sindex']==sindex)
+                self.logger.log(f"Returning mask for {branch_name} with sid = {sid} and sindex = {sindex}", "success")
+            else:
+                self.logger.log(f"Returning mask for {branch_name} with sid = {sid}", "success")
             return mask
         except Exception as e:
             self.logger.log(f"Exception in select_surface(): {e}", "error")
@@ -348,28 +352,40 @@ class Select:
             return None
     
     def hasTrkCrvCoincs(self, data, dt_threshold=150):
-        """ simple version of the crv coincidence checker """
+        """ simple version of the crv coincidence checker
 
-        at_trk_front = self.select_surface(data['trkfit'], surface_name="TT_Front")
-        
-        # Get track and coincidence times
-        trk_times = data["trksegs"]["time"][at_trk_front]  # events × tracks × segments
-        coinc_times = data["crvcoincs.time"]                  # events × coincidences
-        
-        # Broadcast CRV times to match track structure, so that we can compare element-wise
-        coinc_broadcast = coinc_times[:, None, None, :]  # Add dimensions for tracks and segments
-        trk_broadcast = trk_times[:, :, :, None]         # Add dimension for coincidences
+        Args:
+            data (awkward.Array): Input array containing the segments branch, either grouped
+                under "trkfit" (data["trkfit"]["trksegs"]) or flat (data["trksegs"]), and "crvcoincs.time"
+            dt_threshold (float, optional): Maximum |t_trk - t_crv| in ns. Defaults to 150.
+        """
+        try:
+            # Segments may be grouped under "trkfit" or imported flat
+            trkfit = data["trkfit"] if "trkfit" in data.fields else data
+            at_trk_front = self.select_surface(trkfit, surface_name="TT_Front")
 
-        # Calculate time differences
-        dt = abs(trk_broadcast - coinc_broadcast)
-        
-        # Check if within threshold
-        within_threshold = dt < dt_threshold
+            # Get track and coincidence times
+            trk_times = trkfit["trksegs"]["time"][at_trk_front]  # events × tracks × segments
+            coinc_times = data["crvcoincs.time"]                  # events × coincidences
 
-        # Check if any coincidence
-        any_coinc = ak.any(within_threshold, axis=3)
-        
-        # Then reduce over trks (axis=2) 
-        veto = ak.any(any_coinc, axis=2)
+            # Broadcast CRV times to match track structure, so that we can compare element-wise
+            coinc_broadcast = coinc_times[:, None, None, :]  # Add dimensions for tracks and segments
+            trk_broadcast = trk_times[:, :, :, None]         # Add dimension for coincidences
 
-        return veto
+            # Calculate time differences
+            dt = abs(trk_broadcast - coinc_broadcast)
+
+            # Check if within threshold
+            within_threshold = dt < dt_threshold
+
+            # Check if any coincidence
+            any_coinc = ak.any(within_threshold, axis=3)
+
+            # Then reduce over trks (axis=2)
+            veto = ak.any(any_coinc, axis=2)
+
+            self.logger.log(f"Returning mask for track-CRV coincidences within {dt_threshold} ns", "success")
+            return veto
+        except Exception as e:
+            self.logger.log(f"Exception in hasTrkCrvCoincs(): {e}", "error")
+            return None
