@@ -73,13 +73,17 @@ class Reader:
         """Attempt to read remote file with specific location"""
         commands = f"mdh print-url {file_path} -l {location} -s {self.schema}"
         
-        this_file_path = subprocess.check_output(
-            commands,
-            shell=True,
-            universal_newlines=True, 
-            stderr=subprocess.DEVNULL,
-            timeout=30
-        ).strip()
+        try:
+            this_file_path = subprocess.check_output(
+                commands,
+                shell=True,
+                universal_newlines=True,
+                stderr=subprocess.PIPE,
+                timeout=30
+            ).strip()
+        except subprocess.CalledProcessError as e:
+            self.logger.log(f"mdh print-url failed for {file_path}: {e.stderr.strip() if e.stderr else e}", "error")
+            raise
         
         self.logger.log(f"Created file path: {this_file_path}", "info")
         

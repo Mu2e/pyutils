@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import os
+import re
 import subprocess
 import gc
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
@@ -98,7 +99,7 @@ class Processor:
                 file_list = [line.strip() for line in file_list if line.strip()]
 
                 if (len(file_list) > 0):
-                    self.logger.log(f"Successfully loaded file list\n\tPath: {defname}\n\tCount: {len(file_list)} files", "success")
+                    self.logger.log(f"Successfully loaded file list\n\tPath: {file_list_path}\n\tCount: {len(file_list)} files", "success")
                 else: 
                     self.logger.log(f"File list has length {len(file_list)}{help_message}", "warning")
                 
@@ -114,12 +115,14 @@ class Processor:
             self.logger.log(f"Loading file list for SAM definition: {defname}", "max")
             
             try:
-                # Setup commands for SAM query
-                commands = f"samweb list-files 'defname: {defname} with availability anylocation' | sort -V 2>/dev/null"
-                
-                # Execute commands
-                file_list_output = subprocess.check_output(commands, shell=True, universal_newlines=True, stderr=subprocess.DEVNULL) 
-                file_list = [line for line in file_list_output.splitlines() if line]
+                # Run the SAM query directly (no pipe) so a samweb failure raises rather than looking like an empty list
+                commands = ["samweb", "list-files", f"defname: {defname} with availability anylocation"]
+                file_list_output = subprocess.check_output(commands, universal_newlines=True, stderr=subprocess.PIPE)
+                # Natural sort, equivalent to 'sort -V' for numbered file names
+                file_list = sorted(
+                    (line for line in file_list_output.splitlines() if line),
+                    key=lambda name: [int(tok) if tok.isdigit() else tok for tok in re.split(r"(\d+)", name)]
+                )
 
                 if (len(file_list) > 0):
                     self.logger.log(f"Successfully loaded file list\n\tSAM definition: {defname}\n\tCount: {len(file_list)} files", "success")
@@ -129,6 +132,9 @@ class Processor:
                 # Return the file list
                 return file_list
                     
+            except subprocess.CalledProcessError as e:
+                self.logger.log(f"samweb failed for {defname}: {e.stderr.strip() if e.stderr else e}{help_message}", "error")
+                return []
             except Exception as e:
                 self.logger.log(f"Exception while getting file list for {defname}: {e}", "error")
                 return []
@@ -291,7 +297,7 @@ class Processor:
             use_processes=use_processes
         )
 
-        if len(results) == 0:
+        if not results: # None (empty file list) or no successful results
             self.logger.log(f"Results list has length zero", "warning")
             return None
 

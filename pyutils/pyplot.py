@@ -313,6 +313,10 @@ class Plot:
         # Show 
         if show: 
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
         
     def plot_1D_overlay(
         self,
@@ -466,6 +470,10 @@ class Plot:
         # Show 
         if show: 
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
         
     def plot_2D(
         self,
@@ -605,6 +613,10 @@ class Plot:
         # Show if requested
         if show:
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
 
     def plot_2D_overlay(
         self,
@@ -781,8 +793,8 @@ class Plot:
         if labels and len(labels) >= 2:
             from matplotlib.patches import Patch
             legend_elements = [
-                Patch(facecolor=plt.cm.get_cmap(cmap1)(0.7), alpha=alpha, label=labels[0]),
-                Patch(facecolor=plt.cm.get_cmap(cmap2)(0.7), alpha=alpha, label=labels[1])
+                Patch(facecolor=plt.get_cmap(cmap1)(0.7), alpha=alpha, label=labels[0]),
+                Patch(facecolor=plt.get_cmap(cmap2)(0.7), alpha=alpha, label=labels[1])
             ]
             ax.legend(handles=legend_elements, loc=leg_pos)
     
@@ -801,6 +813,10 @@ class Plot:
         # Show if requested
         if show:
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
             
     def plot_graph(
         self,
@@ -909,6 +925,10 @@ class Plot:
         # Show if requested
         if show:
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)
   
     def plot_graph_overlay(
         self,
@@ -1036,3 +1056,7 @@ class Plot:
         # Show 
         if show:
             plt.show()
+
+        # Close figures made here once shown or saved, so loops don't accumulate open figures
+        if new_fig and (show or out_path):
+            plt.close(fig)

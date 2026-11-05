@@ -95,7 +95,7 @@ class Importer:
                 result = tree.arrays(filter_name=self.branches, library="ak")
                 
             else: 
-                self.logger.log(f"Branches type {self.branches.type} not recognised", "error")
+                self.logger.log(f"Branches type {type(self.branches)} not recognised", "error")
                 return None
             
             if result is not None:

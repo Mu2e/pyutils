@@ -121,22 +121,22 @@ class MC:
         
   def is_CeMinusEndpoint(self, data):
     """ returns true if the trkmcsim has process code for ce- endpoint generator """
-    mask = start_process( data, 167)
+    mask = self.start_process(data, 167) # mu2eCeMinusEndpoint
     return mask
 
   def is_CeMinusLeadingLog(self, data):
     """ returns true if the trkmcsim has process code for ce- leading log generator """
-    mask = start_process( data, 168)
+    mask = self.start_process(data, 168) # mu2eCeMinusLeadingLog
     return mask
 
   def is_CePlusEndpoint(self, data):
     """ returns true if the trkmcsim has process code for ce+ endpoint generator """
-    mask = start_process( data, 169)
+    mask = self.start_process(data, 169) # mu2eCePlusEndpoint
     return mask
 
   def is_CePlusLeadingLog(self, data):
     """ returns true if the trkmcsim has process code for ce+ leading log generator """
-    mask = start_process( data, 170)
+    mask = self.start_process(data, 176) # mu2eCePlusLeadingLog (170 is mu2eDIOLeadingLog)
     return mask
     
   def is_target_DIO(self, data):
@@ -144,11 +144,11 @@ class MC:
     """
     try:
         # Need to separate from IPA DIO
-        vector = Vector()
-        rhos = vector.get_rho(data['trkmcsim'],'pos')
-        position = ak.firsts(rhos, axis=1) 
+        # Use each particle's own origin radius (same shape as startCode)
+        vector = Vector(verbosity=0)
+        position = vector.get_rho(data['trkmcsim'],'pos')
 
-        mask = (data['trkmcsim', 'startCode'] == 166) & (position <= 75) 
+        mask = (data['trkmcsim', 'startCode'] == 166) & (position <= 75)
         self.logger.log(f"Returning mask for is_target_DIO", "success")
         return mask
     except Exception as e:
@@ -181,10 +181,6 @@ class MC:
     """
 
     # Check for empty data
-    if ak.num(data['trkmc'], axis=0) == 0:
-      self.logger.log("No events found in the data.", "warning")
-      return []
-
     if ak.num(data, axis=0) == 0:
       self.logger.log("No events found in the data.", "warning")
       return []
@@ -252,17 +248,16 @@ class MC:
     self.logger.log(f"N_CEP: {counts[176]}", "info")
     self.logger.log(f"N_eRPC: {counts[178]}", "info")
     self.logger.log(f"N_iRPC: {counts[179]}", "info")
-    self.logger.log(f"N_eRMC: {counts[171]}", "info")
-    self.logger.log(f"N_iRMC: {counts[172]}", "info")
+    self.logger.log(f"N_iRMC: {counts[171]}", "info")
+    self.logger.log(f"N_eRMC: {counts[172]}", "info")
     self.logger.log(f"N_cosmic: {counts[-1]}", "info")
     self.logger.log(f"N_others: {counts[-2]}", "info")
     
     primary_mask = particle_count_return != -2
 
-    # Apply the mask to the flattened array to select desired elements
+    # Keep the first labelled particle per event, dropping events with none
     particle_count_return = particle_count_return[primary_mask]
-    particle_count_return = [[sublist[0]] for sublist in particle_count_return]
-    particle_count_return = ak.flatten(particle_count_return, axis=None)
+    particle_count_return = ak.drop_none(ak.firsts(particle_count_return, axis=1))
     self.logger.log(f"returned particle count length {len(particle_count_return)}", "info")
     
     return particle_count_return

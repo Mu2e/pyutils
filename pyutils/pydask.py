@@ -101,11 +101,11 @@ class DaskProcessor:
                 worker = custom_worker_func
 
             try:
-                result = worker(file_name)
-                return result
+                return worker(file_name)
             except Exception as e:
+                # Propagate, as Processor.process_data does
                 self._base.logger.log(f"Error processing {file_name}: {e}", "error")
-                return None
+                raise
 
         # Prepare file list
         file_list = self.get_file_list(defname=defname, file_list_path=file_list_path)
@@ -159,6 +159,11 @@ class DaskProcessor:
             if not results:
                 self._base.logger.log("Dask returned no successful results", "warning")
                 return None
+
+            # Custom workers may return anything, so hand back the list as Processor does
+            if custom_worker_func is not None:
+                self._base.logger.log(f"Returning {len(results)} results", "info")
+                return results
 
             concatenated = ak.concatenate(results)
             self._base.logger.log(f"Returning concatenated array containing {len(concatenated)} events", "success")

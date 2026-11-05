@@ -58,7 +58,7 @@ processor = DaskProcessor(
 logger.log("DaskProcessor initialized", "success")
 
 # Define the branches we want
-branches = ["trksegs"]
+branches = ["trk.pdg", "trksegs"]
 
 logger.log("Branches to extract: " + str(branches), "info")
 
@@ -67,7 +67,7 @@ logger.log("\nDaskProcessor with SAM Definition:", "info")
 logger.log("""
 DaskProcessor can retrieve files from SAM definitions for parallel processing:
 
-- SAM definition: "nts.mu2e.ensembleMDS3aMix1BBTriggered.MDC2025-001.root"
+- SAM definition: "nts.mu2e.ensembleNtuple.MDC2025-001_MDS4b.root"
 - Queries files dynamically from the data catalog
 - DaskProcessor creates a local cluster to process files in parallel
 
@@ -90,12 +90,14 @@ logger.log("=" * 70, "info")
 # Use get_file_list() to retrieve files from SAM definition
 logger.log("Retrieving file list from SAM definition...", "info")
 
+# Each MDS4b file has about 180k events, so only process the first few here
+n_files = 4
 file_list = processor.get_file_list(
-    defname="nts.mu2e.ensembleMDS3aMix1BBTriggered.MDC2025-001.root"
-)
+    defname="nts.mu2e.ensembleNtuple.MDC2025-001_MDS4b.root"
+)[:n_files]
 
 if file_list and len(file_list) > 0:
-    logger.log(f"Retrieved {len(file_list)} files from SAM definition", "success")
+    logger.log(f"Using the first {len(file_list)} files from SAM definition", "success")
     logger.log(f"First file: {file_list[0][-80:]}", "info")
     
     # Save to temporary file for use with process_data
@@ -126,6 +128,9 @@ if file_list and len(file_list) > 0:
         )
         
         logger.log("Data aggregation complete", "success")
+
+        # Each track is stored once per fit hypothesis, so keep the e- fits
+        data = data[data["trk.pdg"] == 11][["trksegs"]]
         logger.log(f"Total events from all files: {len(data)}", "info")
         
         # Clean up temp file
